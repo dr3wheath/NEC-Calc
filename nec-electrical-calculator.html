@@ -1,0 +1,2558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NEC Field Calculator</title>
+<style>
+  /* ─── DESIGN TOKENS ─────────────────────────────── */
+  :root {
+    --bg:        #0d0f18;
+    --surface:   #141720;
+    --surface2:  #1c2030;
+    --surface3:  #242840;
+    --border:    #2a2f4a;
+    --border2:   #353b5c;
+    --accent:    #f5a623;
+    --accent-dk: #c4821a;
+    --blue:      #4a90d9;
+    --blue-dk:   #2d6eaa;
+    --green:     #2ecc71;
+    --red:       #e74c3c;
+    --yellow:    #f39c12;
+    --text:      #edf0f7;
+    --text2:     #a8b2c8;
+    --text3:     #606880;
+    --radius:    12px;
+    --radius-sm: 8px;
+    --shadow:    0 4px 24px rgba(0,0,0,0.4);
+    --tab-h:     58px;
+  }
+
+  /* ─── RESET ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
+    line-height: 1.5;
+  }
+
+  /* ─── HEADER ─────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 14px 20px 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .header-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.15rem; font-weight: 800; color: var(--text); letter-spacing: 0.3px; }
+  header p  { font-size: 0.72rem; color: var(--text3); margin-top: 1px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* ─── BOTTOM TABS ────────────────────────────────── */
+  .tab-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--tab-h);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    z-index: 100;
+  }
+  .tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    border: none;
+    background: none;
+    padding: 6px 4px;
+  }
+  .tab-btn .tab-icon { font-size: 20px; line-height: 1; }
+  .tab-btn .tab-label { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+  .tab-btn.active { color: var(--accent); }
+  .tab-btn.active .tab-label { color: var(--accent); }
+
+  /* ─── CONTENT PANELS ─────────────────────────────── */
+  .panel { display: none; padding: 16px; max-width: 700px; margin: 0 auto; }
+  .panel.active { display: block; animation: fadeUp 0.2s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── SECTION HEADER ─────────────────────────────── */
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .section-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .icon-blue  { background: rgba(74,144,217,0.15); }
+  .icon-amber { background: rgba(245,166,35,0.15); }
+  .icon-green { background: rgba(46,204,113,0.15); }
+  .icon-purple{ background: rgba(155,89,182,0.15); }
+  .section-header h2 { font-size: 1rem; font-weight: 700; }
+  .section-header p  { font-size: 0.72rem; color: var(--text3); }
+
+  /* ─── CARDS ──────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ─── FORM ELEMENTS ──────────────────────────────── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  select, input[type="number"] {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s, background 0.2s;
+    min-height: 48px;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23606880' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+  }
+  select:focus, input:focus {
+    outline: none;
+    border-color: var(--blue);
+    background: var(--surface3);
+  }
+  input[type="number"] { text-align: left; }
+
+  /* ─── BUTTONS ────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 48px;
+    padding: 0 22px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 0.3px;
+  }
+  .btn:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-amber { background: linear-gradient(135deg, var(--accent), var(--accent-dk)); color: #000; }
+  .btn-blue  { background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: #fff; }
+  .btn-ghost {
+    background: var(--surface2);
+    border: 1.5px solid var(--border2);
+    color: var(--text2);
+    font-size: 0.82rem;
+    min-height: 42px;
+    padding: 0 16px;
+  }
+  .btn-ghost:hover { border-color: var(--blue); color: var(--text); }
+  .btn-danger-ghost {
+    background: transparent;
+    border: none;
+    color: var(--red);
+    font-size: 1.1rem;
+    min-height: 36px;
+    min-width: 36px;
+    padding: 0;
+    border-radius: 6px;
+  }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* ─── WIRE ITEMS ─────────────────────────────────── */
+  .wire-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 80px 36px;
+    gap: 8px;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .wire-item .qty-wrap { display: flex; align-items: center; gap: 4px; }
+  .wire-item .qty-wrap label { font-size: 0.7rem; color: var(--text3); white-space: nowrap; }
+
+  /* ─── RESULT CARDS ───────────────────────────────── */
+  .results-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--blue);
+  }
+  .result-card.good::before  { background: var(--green); }
+  .result-card.bad::before   { background: var(--red); }
+  .result-card.warn::before  { background: var(--yellow); }
+  .result-card.amber::before { background: var(--accent); }
+  .result-label { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 6px; }
+  .result-value { font-size: 1.9rem; font-weight: 800; color: var(--text); line-height: 1; }
+  .result-value.lg { font-size: 2.2rem; }
+  .result-sub   { font-size: 0.74rem; color: var(--text2); margin-top: 5px; line-height: 1.4; }
+
+  /* ─── STATUS BADGE ───────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .badge-good   { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .badge-bad    { background: rgba(231,76,60,0.15);  color: var(--red);   border: 1px solid rgba(231,76,60,0.3); }
+  .badge-warn   { background: rgba(243,156,18,0.15); color: var(--yellow);border: 1px solid rgba(243,156,18,0.3); }
+  .badge-blue   { background: rgba(74,144,217,0.15); color: var(--blue);  border: 1px solid rgba(74,144,217,0.3); }
+
+  /* ─── PROGRESS BAR ───────────────────────────────── */
+  .prog-wrap {
+    background: var(--surface3);
+    border-radius: 8px;
+    height: 12px;
+    overflow: hidden;
+    margin: 12px 0 6px;
+  }
+  .prog-bar { height: 100%; border-radius: 8px; transition: width 0.5s cubic-bezier(.4,0,.2,1), background 0.3s; }
+  .prog-labels { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text3); }
+
+  /* ─── TABLE ──────────────────────────────────────── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .data-table th {
+    background: var(--surface3);
+    padding: 9px 12px;
+    text-align: left;
+    color: var(--text3);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .data-table td:first-child { color: var(--text); font-weight: 600; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table tr.highlight td { background: rgba(245,166,35,0.08); color: var(--accent); font-weight: 700; }
+  .data-table tr.highlight td:first-child { color: var(--accent); }
+
+  /* ─── NOTE BOX ───────────────────────────────────── */
+  .note {
+    background: rgba(74,144,217,0.08);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    color: var(--text2);
+    margin-top: 14px;
+    line-height: 1.5;
+  }
+  .note strong { color: var(--blue); }
+  .note.warn-note { background: rgba(231,76,60,0.08); border-color: rgba(231,76,60,0.25); }
+  .note.warn-note strong { color: var(--red); }
+
+  /* ─── DIVIDER ────────────────────────────────────── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ─── SUB-LABEL ──────────────────────────────────── */
+  .sub-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  /* ─── QUICK TABLES TOGGLE ────────────────────────── */
+  .qt-select { margin-bottom: 14px; max-width: 300px; }
+
+  /* ─── EMPTY STATE ────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 28px 20px;
+    color: var(--text3);
+    font-size: 0.85rem;
+  }
+  .empty-state .es-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ─── FOOTER ─────────────────────────────────────── */
+  .app-footer {
+    text-align: center;
+    padding: 12px 16px 8px;
+    color: var(--text3);
+    font-size: 0.68rem;
+    letter-spacing: 0.3px;
+    line-height: 1.6;
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────────────── */
+  @media (min-width: 640px) {
+    body { padding-bottom: 0; }
+    .tab-bar { position: static; border-top: none; border-bottom: 2px solid var(--accent); grid-template-columns: repeat(6, auto); justify-content: flex-start; height: auto; padding: 0 8px; background: var(--surface); }
+    .tab-btn { flex-direction: row; gap: 8px; padding: 14px 18px; border-bottom: 3px solid transparent; border-radius: 0; }
+    .tab-btn.active { border-bottom-color: var(--accent); background: none; }
+    .tab-btn .tab-icon { font-size: 16px; }
+    .tab-btn .tab-label { font-size: 0.82rem; letter-spacing: 0.3px; }
+    .panel { padding: 20px; }
+  }
+  @media (max-width: 380px) {
+    .wire-item { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+    .wire-item .qty-wrap { grid-column: 1; }
+    .btn-danger-ghost { grid-column: 2; justify-self: end; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── EXPORT BUTTON ──────────────────────────── */
+  .btn-export {
+    background: linear-gradient(135deg, #8e44ad, #6c3483);
+    color: #fff;
+    font-size: 0.78rem;
+    min-height: 38px;
+    padding: 0 14px;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .section-header { align-items: flex-start; }
+
+  /* ─── PRINT / PDF REPORT ─────────────────────── */
+  #print-report { display: none; }
+
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body > *:not(#print-report) { display: none !important; }
+
+    #print-report {
+      display: block !important;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111;
+      background: #fff;
+    }
+
+    /* ── PAGE HEADER ── */
+    .pr-pg-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 36px 14px;
+      border-bottom: 3px solid #f5a623;
+    }
+    .pr-pg-header img { height: 46px; max-width: 200px; object-fit: contain; }
+    .pr-pg-header-right { text-align: right; }
+    .pr-pg-header-right .pr-app-label {
+      font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.8px; color: #aaa; font-weight: 700;
+    }
+    .pr-pg-header-right .pr-rpt-label {
+      font-size: 0.82rem; font-weight: 800; color: #1e2b4a; margin-top: 2px;
+    }
+
+    /* ── TITLE BAND ── */
+    .pr-title-band {
+      background: #1e2b4a;
+      padding: 13px 36px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .pr-title-band .pt-main { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
+    .pr-title-band .pt-sub  { font-size: 0.68rem; color: #7e9cc0; margin-top: 3px; }
+    .pr-title-band .pt-date { font-size: 0.68rem; color: #7e9cc0; text-align: right; line-height: 1.6; }
+
+    /* ── BODY ── */
+    .pr-body { padding: 22px 36px 28px; }
+
+    /* ── SUMMARY BOXES ── */
+    .pr-summary {
+      display: flex; gap: 12px; margin-bottom: 22px;
+    }
+    .pr-sbox {
+      flex: 1; border: 1px solid #dde3ef; border-radius: 6px;
+      padding: 12px 14px; border-top: 3px solid #4a90d9;
+    }
+    .pr-sbox.good  { border-top-color: #2e7d32; }
+    .pr-sbox.bad   { border-top-color: #c62828; }
+    .pr-sbox.warn  { border-top-color: #e65100; }
+    .pr-sbox.amber { border-top-color: #f5a623; }
+    .pr-sbox .sbl { font-size: 0.6rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.7px; color: #888; margin-bottom: 5px; }
+    .pr-sbox .sbv { font-size: 1.2rem; font-weight: 800; color: #111; line-height: 1.1; }
+    .pr-sbox .sbv.pass { color: #2e7d32; }
+    .pr-sbox .sbv.fail { color: #c62828; }
+    .pr-sbox .sbv.warn { color: #e65100; }
+    .pr-sbox .sbs { font-size: 0.67rem; color: #777; margin-top: 4px; line-height: 1.4; }
+
+    /* ── SECTION HEADER ── */
+    .pr-sh {
+      font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 1.3px; color: #1e2b4a;
+      background: #edf1f7; border-left: 3px solid #f5a623;
+      padding: 6px 12px; margin-bottom: 0;
+    }
+    .pr-section { margin-bottom: 22px; break-inside: avoid; }
+
+    /* ── TABLES ── */
+    .pr-table { width: 100%; border-collapse: collapse; font-size: 0.79rem; border: 1px solid #dde3ef; }
+    .pr-table th {
+      background: #f0f4fa; padding: 7px 12px;
+      text-align: left; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; color: #55637a;
+      border-bottom: 2px solid #d0d8e8;
+    }
+    .pr-table td {
+      padding: 8px 12px; border-bottom: 1px solid #edf1f7;
+      color: #555; vertical-align: top;
+    }
+    .pr-table td:first-child { color: #222; font-weight: 500; }
+    .pr-table tr:last-child td { border-bottom: none; }
+    .pr-table tr.pr-hr td {
+      background: #fffbf0; font-weight: 700; color: #1e2b4a;
+      border-top: 2px solid #f5a623; border-bottom: 2px solid #f5a623;
+    }
+    .pr-table tr.pr-hr td:first-child { color: #1e2b4a; }
+
+    /* ── FORMULA BOX ── */
+    .pr-formula {
+      background: #f7f9fc; border: 1px solid #d8e0ec;
+      border-left: 3px solid #4a90d9; border-radius: 0 4px 4px 0;
+      padding: 10px 14px; font-family: 'Courier New', monospace;
+      font-size: 0.78rem; color: #1e2b4a; line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    /* ── NEC CITATIONS ── */
+    .pr-cites { border: 1px solid #dde3ef; border-radius: 4px; overflow: hidden; }
+    .pr-cite {
+      display: grid; grid-template-columns: 200px 1fr; gap: 14px;
+      padding: 9px 14px; border-bottom: 1px solid #edf1f7; font-size: 0.74rem;
+      break-inside: avoid;
+    }
+    .pr-cite:last-child { border-bottom: none; }
+    .pr-cite:nth-child(odd) { background: #fafbfd; }
+    .pr-cite .cr { font-weight: 700; color: #1e2b4a; line-height: 1.4; }
+    .pr-cite .cd { color: #555; line-height: 1.5; }
+
+    /* ── PAGE FOOTER ── */
+    .pr-footer {
+      border-top: 1px solid #dde3ef; padding: 10px 36px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.61rem; color: #aaa; margin-top: 8px;
+    }
+    .pr-footer .pf-disc { flex: 1; line-height: 1.5; }
+    .pr-footer .pf-std  { font-weight: 800; color: #1e2b4a; white-space: nowrap; margin-left: 24px; font-size: 0.65rem; }
+
+    @page { margin: 0; size: letter; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-icon">⚡</div>
+  <div>
+    <h1>NEC Field Calculator</h1>
+    <p>NFPA 70, 2023 Edition · Conduit Fill · Ampacity · Voltage Drop</p>
+  </div>
+</header>
+
+<!-- TAB BAR -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('fill',this)">
+    <span class="tab-icon">🔵</span><span class="tab-label">Conduit Fill</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('ampacity',this)">
+    <span class="tab-icon">🟡</span><span class="tab-label">Ampacity</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('vdrop',this)">
+    <span class="tab-icon">🟢</span><span class="tab-label">Volt Drop</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('tables',this)">
+    <span class="tab-icon">📋</span><span class="tab-label">Tables</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('generator',this)">
+    <span class="tab-icon">🔋</span><span class="tab-label">Generator</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('ground',this)">
+    <span class="tab-icon">⏚</span><span class="tab-label">Grounding</span>
+  </button>
+</nav>
+
+<!-- ═══════════════ CONDUIT FILL ═══════════════ -->
+<div id="fill" class="panel active">
+  <div class="section-header">
+    <div class="section-icon icon-blue">📐</div>
+    <div style="flex:1">
+      <h2>Conduit Fill</h2>
+      <p>NEC Chapter 9, Tables 1 & 4</p>
+    </div>
+    <button class="btn btn-export" onclick="exportPDF('fill')">⬇ Export PDF</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Conduit Selection</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Conduit Type</label>
+        <select id="fill_type" onchange="runFill()">
+          <option value="EMT">EMT</option>
+          <option value="RMC">RMC</option>
+          <option value="PVC40">PVC Schedule 40</option>
+          <option value="PVC80">PVC Schedule 80</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trade Size</label>
+        <select id="fill_size" onchange="runFill()">
+          <option value="0.5">½"</option>
+          <option value="0.75">¾"</option>
+          <option value="1">1"</option>
+          <option value="1.25">1¼"</option>
+          <option value="1.5" selected>1½"</option>
+          <option value="2">2"</option>
+          <option value="2.5">2½"</option>
+          <option value="3">3"</option>
+          <option value="3.5">3½"</option>
+          <option value="4">4"</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Conductors</div>
+    <div id="wire_list"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn btn-blue" onclick="addWire()">＋ Add Conductor</button>
+      <button class="btn btn-ghost" onclick="clearWires()">Clear All</button>
+    </div>
+  </div>
+
+  <div id="fill_results">
+    <div class="empty-state">
+      <div class="es-icon">📐</div>
+      Add conductors above to calculate fill
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>NEC Ch. 9, Table 1:</strong> 1 conductor = 53% max · 2 conductors = 31% max · 3+ conductors = 40% max
+  </div>
+</div>
+
+<!-- ═══════════════ AMPACITY ═══════════════ -->
+<div id="ampacity" class="panel">
+  <div class="section-header">
+    <div class="section-icon icon-amber">⚡</div>
+    <div style="flex:1">
+      <h2>Wire Ampacity</h2>
+      <p>NEC Table 310.12 with derating</p>
+    </div>
+    <button class="btn btn-export" onclick="exportPDF('ampacity')">⬇ Export PDF</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Conductor</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Material</label>
+        <select id="a_mat" onchange="runAmp()">
+          <option value="CU">Copper</option>
+          <option value="AL">Aluminum</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Wire Size</label>
+        <select id="a_size" onchange="runAmp()">
+          <option value="14">14 AWG</option><option value="12">12 AWG</option>
+          <option value="10">10 AWG</option><option value="8">8 AWG</option>
+          <option value="6">6 AWG</option><option value="4">4 AWG</option>
+          <option value="3">3 AWG</option><option value="2">2 AWG</option>
+          <option value="1">1 AWG</option><option value="1/0">1/0</option>
+          <option value="2/0">2/0</option><option value="3/0">3/0</option>
+          <option value="4/0" selected>4/0</option>
+          <option value="250">250 kcmil</option><option value="300">300 kcmil</option>
+          <option value="350">350 kcmil</option><option value="400">400 kcmil</option>
+          <option value="500">500 kcmil</option><option value="600">600 kcmil</option>
+          <option value="750">750 kcmil</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Insulation Rating</label>
+        <select id="a_ins" onchange="runAmp()">
+          <option value="90">THHN / THWN-2 — 90°C</option>
+          <option value="75">THWN / XHHW — 75°C</option>
+          <option value="60">TW — 60°C</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Derating Factors</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Current-Carrying Conductors</label>
+        <select id="a_ccc" onchange="runAmp()">
+          <option value="1">1–3 (No derating)</option>
+          <option value="0.8">4–6 (80%)</option>
+          <option value="0.7">7–9 (70%)</option>
+          <option value="0.5">10–20 (50%)</option>
+          <option value="0.45">21–30 (45%)</option>
+          <option value="0.4">31–40 (40%)</option>
+          <option value="0.35">41+ (35%)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ambient Temperature</label>
+        <select id="a_temp" onchange="runAmp()">
+          <option value="10">≤10°C / 50°F</option>
+          <option value="15">11–15°C / 59°F</option>
+          <option value="20">16–20°C / 68°F</option>
+          <option value="25">21–25°C / 77°F</option>
+          <option value="30" selected>26–30°C / 86°F (Base)</option>
+          <option value="35">31–35°C / 95°F</option>
+          <option value="40">36–40°C / 104°F</option>
+          <option value="45">41–45°C / 113°F</option>
+          <option value="50">46–50°C / 122°F</option>
+          <option value="55">51–55°C / 131°F</option>
+          <option value="60">56–60°C / 140°F</option>
+          <option value="70">61–70°C / 158°F</option>
+          <option value="80">71–80°C / 176°F</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Terminal Rating</label>
+        <select id="a_term" onchange="runAmp()">
+          <option value="75">75°C (most equipment)</option>
+          <option value="60">60°C (older equipment)</option>
+          <option value="90">90°C (high-temp rated)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Parallel Conductors — NEC 310.10(H)</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Paralleling</label>
+        <select id="a_parallel" onchange="toggleParallel(); runAmp()">
+          <option value="1">No — Single conductor set</option>
+          <option value="2">Yes — 2 conductors per phase</option>
+          <option value="3">Yes — 3 conductors per phase</option>
+          <option value="4">Yes — 4 conductors per phase</option>
+          <option value="5">Yes — 5 conductors per phase</option>
+          <option value="6">Yes — 6 conductors per phase</option>
+        </select>
+      </div>
+      <div class="form-group" id="a_raceway_group" style="display:none">
+        <label class="form-label">Conductor Arrangement</label>
+        <select id="a_raceway" onchange="runAmp()">
+          <option value="separate">Separate raceways per set</option>
+          <option value="combined">All sets in same raceway</option>
+        </select>
+      </div>
+    </div>
+    <div id="parallel_note"></div>
+  </div>
+
+  <div id="amp_results"></div>
+
+  <div class="note">
+    <strong>NEC 110.14(C):</strong> Final ampacity is limited to the lowest temperature rating of any connected terminal or conductor. Most breakers and lugs are rated 75°C.
+  </div>
+</div>
+
+<!-- ═══════════════ VOLTAGE DROP ═══════════════ -->
+<div id="vdrop" class="panel">
+  <div class="section-header">
+    <div class="section-icon icon-green">📉</div>
+    <div style="flex:1">
+      <h2>Voltage Drop</h2>
+      <p>NEC 210.19(A) informational note</p>
+    </div>
+    <button class="btn btn-export" onclick="exportPDF('vdrop')">⬇ Export PDF</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Circuit Parameters</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">System Voltage</label>
+        <select id="vd_v" onchange="runVD()">
+          <option value="120">120V — Single Phase</option>
+          <option value="208">208V — Three Phase</option>
+          <option value="240" selected>240V — Single Phase</option>
+          <option value="277">277V — Single Phase</option>
+          <option value="480">480V — Three Phase</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Circuit Type</label>
+        <select id="vd_ph" onchange="runVD()">
+          <option value="1">Single-Phase</option>
+          <option value="3">Three-Phase</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Conductor</label>
+        <select id="vd_mat" onchange="runVD()">
+          <option value="12.9">Copper (K=12.9)</option>
+          <option value="21.2">Aluminum (K=21.2)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Load & Run Details</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Wire Size</label>
+        <select id="vd_sz" onchange="runVD()">
+          <option value="14">14 AWG</option><option value="12">12 AWG</option>
+          <option value="10">10 AWG</option><option value="8">8 AWG</option>
+          <option value="6">6 AWG</option><option value="4" selected>4 AWG</option>
+          <option value="3">3 AWG</option><option value="2">2 AWG</option>
+          <option value="1">1 AWG</option><option value="1/0">1/0</option>
+          <option value="2/0">2/0</option><option value="3/0">3/0</option>
+          <option value="4/0">4/0</option>
+          <option value="250">250 kcmil</option><option value="300">300 kcmil</option>
+          <option value="350">350 kcmil</option><option value="400">400 kcmil</option>
+          <option value="500">500 kcmil</option><option value="600">600 kcmil</option>
+          <option value="750">750 kcmil</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Load (Amps)</label>
+        <input type="number" id="vd_a" value="50" min="1" oninput="runVD()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">One-Way Length (ft)</label>
+        <input type="number" id="vd_l" value="150" min="1" oninput="runVD()">
+      </div>
+    </div>
+  </div>
+
+  <div id="vd_results"></div>
+
+  <hr class="divider">
+
+  <div class="card">
+    <div class="card-title">Minimum Wire Size Finder</div>
+    <div class="form-grid" style="margin-bottom:12px;">
+      <div class="form-group">
+        <label class="form-label">Max Allowable VD%</label>
+        <select id="vd_tgt">
+          <option value="3">3% — Branch circuit (NEC rec.)</option>
+          <option value="5">5% — Feeder + branch combined</option>
+          <option value="2">2% — Sensitive equipment</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="runMinWire()">Find Minimum Wire Size</button>
+    <div id="vd_minwire" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="note">
+    <strong>NEC Recommendation:</strong> Max 3% VD on branch circuits, 5% total (feeder + branch). Not a hard code requirement but best practice per NEC 210.19(A) &amp; 215.2(A).
+  </div>
+</div>
+
+<!-- ═══════════════ QUICK TABLES ═══════════════ -->
+<div id="tables" class="panel">
+  <div class="section-header">
+    <div class="section-icon icon-purple">📋</div>
+    <div>
+      <h2>Quick Reference</h2>
+      <p>NEC Tables 310.12, Ch. 9 Table 4 &amp; 5</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Ampacity Table — NEC 310.12</div>
+    <div class="qt-select">
+      <select onchange="renderAmpTable(this.value)">
+        <option value="CU">Copper Conductors</option>
+        <option value="AL">Aluminum Conductors</option>
+      </select>
+    </div>
+    <div id="amp_tbl"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Wire Cross-Sectional Areas — Ch. 9, Table 5</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead><tr><th>Size</th><th>THHN/THWN-2 (in²)</th><th>XHHW (in²)</th><th>Circ. Mils</th></tr></thead>
+        <tbody id="area_tbl"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Conduit Internal Areas — Ch. 9, Table 4</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead><tr><th>Trade Size</th><th>EMT</th><th>RMC</th><th>PVC 40</th><th>PVC 80</th></tr></thead>
+        <tbody id="conduit_tbl"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">NM-B Cable Areas (approx.)</div>
+    <table class="data-table">
+      <thead><tr><th>Cable</th><th>Area (in²)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>14/2 NM-B</td><td>0.198</td><td>Whole cable</td></tr>
+        <tr><td>14/3 NM-B</td><td>0.233</td><td>Whole cable</td></tr>
+        <tr><td>12/2 NM-B</td><td>0.242</td><td>Whole cable</td></tr>
+        <tr><td>12/3 NM-B</td><td>0.290</td><td>Whole cable</td></tr>
+        <tr><td>10/2 NM-B</td><td>0.294</td><td>Whole cable</td></tr>
+        <tr><td>10/3 NM-B</td><td>0.353</td><td>Whole cable</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ GENERATOR ═══════════════ -->
+<div id="generator" class="panel">
+  <div class="section-header">
+    <div class="section-icon icon-green">🔋</div>
+    <div style="flex:1">
+      <h2>Generator Sizing</h2>
+      <p>Usable ampacity from existing generator</p>
+    </div>
+    <button class="btn btn-export" onclick="exportPDF('generator')">⬇ Export PDF</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Generator Nameplate</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Common Generator Size</label>
+        <select id="gen_preset" onchange="applyGenPreset()">
+          <option value="">— Select or enter manually —</option>
+          <optgroup label="Portable / Jobsite">
+            <option value="5">5 kVA</option>
+            <option value="7.5">7.5 kVA</option>
+            <option value="10">10 kVA</option>
+            <option value="12.5">12.5 kVA</option>
+            <option value="15">15 kVA</option>
+            <option value="20">20 kVA</option>
+          </optgroup>
+          <optgroup label="Standby / Light Commercial">
+            <option value="25">25 kVA</option>
+            <option value="30">30 kVA</option>
+            <option value="40">40 kVA</option>
+            <option value="45">45 kVA</option>
+            <option value="50">50 kVA</option>
+            <option value="60">60 kVA</option>
+            <option value="75">75 kVA</option>
+          </optgroup>
+          <optgroup label="Commercial / Industrial">
+            <option value="80">80 kVA</option>
+            <option value="100">100 kVA</option>
+            <option value="125">125 kVA</option>
+            <option value="150">150 kVA</option>
+            <option value="175">175 kVA</option>
+            <option value="200">200 kVA</option>
+            <option value="250">250 kVA</option>
+            <option value="300">300 kVA</option>
+            <option value="350">350 kVA</option>
+            <option value="400">400 kVA</option>
+            <option value="500">500 kVA</option>
+            <option value="600">600 kVA</option>
+            <option value="750">750 kVA</option>
+            <option value="1000">1,000 kVA</option>
+            <option value="1250">1,250 kVA</option>
+            <option value="1500">1,500 kVA</option>
+            <option value="2000">2,000 kVA</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Generator Size (kVA)</label>
+        <input type="number" id="gen_kva" value="" placeholder="e.g. 100" min="0.1" step="0.1" oninput="syncKvaKw('kva'); runGen()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Power Factor (PF)</label>
+        <select id="gen_pf" onchange="syncKvaKw('pf'); runGen()">
+          <option value="0.8" selected>0.80 (Standard)</option>
+          <option value="0.85">0.85</option>
+          <option value="0.9">0.90</option>
+          <option value="0.95">0.95</option>
+          <option value="1.0">1.00 (Unity)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Real Power (kW)</label>
+        <input type="number" id="gen_kw" value="" placeholder="Auto-calculated" min="0.1" step="0.1" oninput="syncKvaKw('kw'); runGen()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Output Configuration</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Output Voltage</label>
+        <select id="gen_v" onchange="runGen()">
+          <option value="120">120V</option>
+          <option value="208">208V</option>
+          <option value="240" selected>240V</option>
+          <option value="277">277V</option>
+          <option value="480">480V</option>
+          <option value="600">600V</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phase</label>
+        <select id="gen_ph" onchange="runGen()">
+          <option value="1">Single-Phase (1Ø)</option>
+          <option value="3" selected>Three-Phase (3Ø)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Continuous Load Limit</label>
+        <select id="gen_limit" onchange="runGen()">
+          <option value="0.8" selected>80% — NEC 445.13 Continuous</option>
+          <option value="1.0">100% — Full Nameplate</option>
+          <option value="0.9">90%</option>
+          <option value="0.85">85%</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Conductor Sizing</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Downstream OCPD — NEC 240.6(A)</label>
+      <select id="gen_ocpd" onchange="runGen()">
+        <option value="0" selected>None — terminal conductors governed by NEC 445.13</option>
+        <optgroup label="Standard OCPD Sizes (NEC 240.6(A))">
+          <option value="15">15A</option><option value="20">20A</option>
+          <option value="25">25A</option><option value="30">30A</option>
+          <option value="35">35A</option><option value="40">40A</option>
+          <option value="45">45A</option><option value="50">50A</option>
+          <option value="60">60A</option><option value="70">70A</option>
+          <option value="80">80A</option><option value="90">90A</option>
+          <option value="100">100A</option><option value="110">110A</option>
+          <option value="125">125A</option><option value="150">150A</option>
+          <option value="175">175A</option><option value="200">200A</option>
+          <option value="225">225A</option><option value="250">250A</option>
+          <option value="300">300A</option><option value="350">350A</option>
+          <option value="400">400A</option><option value="450">450A</option>
+          <option value="500">500A</option><option value="600">600A</option>
+          <option value="700">700A</option><option value="800">800A</option>
+          <option value="1000">1000A</option><option value="1200">1200A</option>
+        </optgroup>
+      </select>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:5px;">
+        NEC 445.13 governs only from generator terminals to the <em>first</em> OCPD. Select an OCPD to size downstream conductors per NEC 240.4 instead.
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Conductor Material</label>
+        <select id="gen_wmat" onchange="runGen()">
+          <option value="CU">Copper</option>
+          <option value="AL">Aluminum</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Insulation Rating</label>
+        <select id="gen_ins" onchange="runGen()">
+          <option value="75" selected>75°C — THWN / XHHW</option>
+          <option value="90">90°C — THHN / THWN-2</option>
+          <option value="60">60°C — TW</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Terminal Rating</label>
+        <select id="gen_term" onchange="runGen()">
+          <option value="75" selected>75°C — Most breakers &amp; lugs</option>
+          <option value="60">60°C</option>
+          <option value="90">90°C — Rated terminals</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ambient Temperature</label>
+        <select id="gen_amb" onchange="runGen()">
+          <option value="10">10°C (50°F)</option>
+          <option value="15">15°C (59°F)</option>
+          <option value="20">20°C (68°F)</option>
+          <option value="25">25°C (77°F)</option>
+          <option value="30" selected>30°C (86°F) — NEC standard</option>
+          <option value="35">35°C (95°F)</option>
+          <option value="40">40°C (104°F)</option>
+          <option value="45">45°C (113°F)</option>
+          <option value="50">50°C (122°F)</option>
+          <option value="55">55°C (131°F)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Current-Carrying Conductors</label>
+        <select id="gen_ccc" onchange="runGen()">
+          <option value="1" selected>1–3 CCC — No derating</option>
+          <option value="0.8">4–6 CCC — 80% (NEC Table 310.15(C)(1))</option>
+          <option value="0.7">7–9 CCC — 70%</option>
+          <option value="0.5">10–20 CCC — 50%</option>
+          <option value="0.45">21–30 CCC — 45%</option>
+          <option value="0.4">31–40 CCC — 40%</option>
+          <option value="0.35">41+ CCC — 35%</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Parallel Conductors</label>
+        <select id="gen_parallel" onchange="runGen()">
+          <option value="0" selected>Auto — size then decide</option>
+          <option value="1">1 Set — Single conductor</option>
+          <option value="2">2 Sets per phase</option>
+          <option value="3">3 Sets per phase</option>
+          <option value="4">4 Sets per phase</option>
+          <option value="5">5 Sets per phase</option>
+          <option value="6">6 Sets per phase</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="gen_results">
+    <div class="empty-state">
+      <div class="es-icon">🔋</div>
+      Enter generator kVA above to calculate
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>NEC 445.13:</strong> Conductors from generator terminals must have an ampacity ≥ 115% of nameplate current rating.<br>
+    <strong>NEC 310.15(B)/(C):</strong> Derated ampacity = Base × Temp Correction × CCC Adjustment. Final ampacity is limited to the lower of derated or terminal rating (NEC 110.14(C)).<br>
+    <strong>NEC 310.10(H):</strong> Parallel conductors must be 1/0 AWG or larger and identical in size, material, insulation, and length.
+  </div>
+</div>
+
+<!-- ═══════════════ GROUNDING ═══════════════ -->
+<div id="ground" class="panel">
+  <div class="section-header">
+    <div class="section-icon icon-blue">⏚</div>
+    <div style="flex:1">
+      <h2>Grounding Conductor Sizing</h2>
+      <p id="gnd_subtitle">Equipment Grounding Conductor — NEC 250.122</p>
+    </div>
+    <button class="btn btn-export" onclick="exportPDF('ground')">⬇ Export PDF</button>
+  </div>
+
+  <!-- Type Selector -->
+  <div class="card" style="padding:14px 16px;">
+    <div style="font-size:0.75rem;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">Select Conductor Type to Size</div>
+    <div style="display:flex;gap:8px;">
+      <button id="gnd_btn_egc" onclick="switchGndType('EGC')"
+        style="flex:1;padding:12px 8px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.15s;text-align:center;">
+        EGC
+        <div style="font-size:0.72rem;font-weight:500;margin-top:3px;opacity:0.9;">Equipment Grounding Conductor</div>
+        <div style="font-size:0.68rem;font-weight:400;margin-top:1px;opacity:0.8;">NEC 250.122</div>
+      </button>
+      <button id="gnd_btn_gec" onclick="switchGndType('GEC')"
+        style="flex:1;padding:12px 8px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.15s;text-align:center;">
+        GEC
+        <div style="font-size:0.72rem;font-weight:500;margin-top:3px;opacity:0.9;">Grounding Electrode Conductor</div>
+        <div style="font-size:0.68rem;font-weight:400;margin-top:1px;opacity:0.8;">NEC 250.66</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── EGC Section ── -->
+  <div id="gnd_egc_section">
+    <div class="card">
+      <div class="card-title">Equipment Grounding Conductor (EGC) — NEC Table 250.122</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">OCPD Rating</label>
+          <select id="egc_ocpd" onchange="runGnd()">
+            <option value="15">15A</option><option value="20">20A</option>
+            <option value="30">30A</option><option value="40">40A</option>
+            <option value="60">60A</option><option value="100" selected>100A</option>
+            <option value="200">200A</option><option value="300">300A</option>
+            <option value="400">400A</option><option value="500">500A</option>
+            <option value="600">600A</option><option value="800">800A</option>
+            <option value="1000">1000A</option><option value="1200">1200A</option>
+            <option value="1600">1600A</option><option value="2000">2000A</option>
+            <option value="2500">2500A</option><option value="3000">3000A</option>
+            <option value="4000">4000A</option><option value="5000">5000A</option>
+            <option value="6000">6000A</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">EGC Material</label>
+          <select id="egc_mat" onchange="runGnd()">
+            <option value="CU">Copper</option>
+            <option value="AL">Aluminum / Copper-Clad Al</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label" style="flex-direction:row;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="egc_prop" onchange="toggleEgcProp();runGnd()" style="width:auto;margin:0;">
+          Conductors upsized above minimum — apply proportional EGC increase (NEC 250.122(B))
+        </label>
+      </div>
+      <div id="egc_prop_group" style="display:none;" class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Minimum Required Phase Size</label>
+          <select id="egc_phase_min" onchange="runGnd()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Actual Installed Phase Size</label>
+          <select id="egc_phase_act" onchange="runGnd()"></select>
+        </div>
+      </div>
+      <div id="egc_results" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">EGC Quick Reference — NEC Table 250.122</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>OCPD Rating (A)</th><th>Copper EGC</th><th>Aluminum / CCA EGC</th></tr></thead>
+          <tbody id="egc_ref_tbl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>NEC 250.122:</strong> EGC is sized by the rating of the OCPD protecting the circuit. Where phase conductors are increased above the minimum required size, the EGC must be proportionally increased per NEC 250.122(B).<br>
+      <strong>NEC 310.10(H):</strong> For parallel conductors, each raceway or cable must contain an EGC individually sized for the OCPD.
+    </div>
+  </div>
+
+  <!-- ── GEC Section ── -->
+  <div id="gnd_gec_section" style="display:none;">
+    <div class="card">
+      <div class="card-title">Grounding Electrode Conductor (GEC) — NEC Table 250.66</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">SE Conductor Material</label>
+          <select id="gec_semat" onchange="updateGecSizes();runGnd()">
+            <option value="CU">Copper</option>
+            <option value="AL">Aluminum / Copper-Clad Al</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Largest SE Conductor Size</label>
+          <select id="gec_sesz" onchange="runGnd()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">GEC Material</label>
+          <select id="gec_mat" onchange="runGnd()">
+            <option value="CU">Copper</option>
+            <option value="AL">Aluminum / Copper-Clad Al</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Electrode Type</label>
+          <select id="gec_elec" onchange="runGnd()">
+            <option value="general">General — no additional size cap</option>
+            <option value="rod">Rod / Pipe / Plate — NEC 250.66(A)</option>
+            <option value="concrete">Concrete-Encased — NEC 250.66(B)</option>
+            <option value="ring">Ground Ring — NEC 250.66(C)</option>
+          </select>
+        </div>
+      </div>
+      <div id="gec_results" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">GEC Quick Reference — NEC Table 250.66</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>SE Conductor — Copper</th><th>SE Conductor — Al/CCA</th><th>GEC Copper</th><th>GEC Al/CCA</th></tr></thead>
+          <tbody>
+            <tr><td>2 AWG or smaller</td><td>1/0 AWG or smaller</td><td>8 AWG</td><td>6 AWG</td></tr>
+            <tr><td>1 AWG or 1/0 AWG</td><td>2/0–3/0 AWG</td><td>6 AWG</td><td>4 AWG</td></tr>
+            <tr><td>2/0–3/0 AWG</td><td>4/0–250 kcmil</td><td>4 AWG</td><td>2 AWG</td></tr>
+            <tr><td>Over 3/0–350 kcmil</td><td>Over 250–500 kcmil</td><td>2 AWG</td><td>1/0 AWG</td></tr>
+            <tr><td>Over 350–600 kcmil</td><td>Over 500–900 kcmil</td><td>1/0 AWG</td><td>3/0 AWG</td></tr>
+            <tr><td>Over 600–1100 kcmil</td><td>Over 900–1750 kcmil</td><td>2/0 AWG</td><td>4/0 AWG</td></tr>
+            <tr class="highlight"><td>Over 1100 kcmil</td><td>Over 1750 kcmil</td><td>3/0 AWG</td><td>250 kcmil</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>NEC 250.66:</strong> GEC is sized by the largest service-entrance conductor. Size caps apply based on electrode type per NEC 250.66(A)–(C).<br>
+      <strong>NEC 250.66(A):</strong> Rod, pipe, and plate electrodes — GEC not required to exceed 6 AWG copper or 4 AWG aluminum.<br>
+      <strong>NEC 250.66(B):</strong> Concrete-encased electrode — GEC not required to exceed 4 AWG copper.
+    </div>
+  </div>
+</div>
+
+<div class="app-footer">
+  ⚠ References based on NFPA 70, 2023 Edition. Always verify against the edition adopted in your jurisdiction.<br>This tool is a field aid — not a substitute for engineering judgment.
+</div>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+/* ── NEC DATA ── */
+const CONDUIT = {
+  EMT:   {"0.5":0.304,"0.75":0.533,"1":0.864,"1.25":1.496,"1.5":2.036,"2":3.356,"2.5":5.858,"3":8.846,"3.5":11.545,"4":14.753},
+  RMC:   {"0.5":0.314,"0.75":0.549,"1":0.887,"1.25":1.526,"1.5":2.071,"2":3.408,"2.5":4.866,"3":7.499,"3.5":9.621,"4":12.566},
+  PVC40: {"0.5":0.285,"0.75":0.508,"1":0.832,"1.25":1.453,"1.5":1.986,"2":3.291,"2.5":5.453,"3":8.085,"3.5":10.694,"4":13.631},
+  PVC80: {"0.5":0.217,"0.75":0.409,"1":0.688,"1.25":1.237,"1.5":1.711,"2":2.874,"2.5":4.754,"3":7.073,"3.5":9.353,"4":12.000}
+};
+const SIZES = ["14","12","10","8","6","4","3","2","1","1/0","2/0","3/0","4/0","250","300","350","400","500","600","750"];
+const WIRE_A = {
+  THHN: {"14":0.0097,"12":0.0133,"10":0.0211,"8":0.0366,"6":0.0507,"4":0.0824,"3":0.0973,"2":0.1158,"1":0.1562,"1/0":0.1855,"2/0":0.2223,"3/0":0.2679,"4/0":0.3237,"250":0.3970,"300":0.4608,"350":0.5242,"400":0.5863,"500":0.7073,"600":0.8676,"750":1.0496},
+  XHHW: {"14":0.0139,"12":0.0181,"10":0.0243,"8":0.0437,"6":0.0590,"4":0.0814,"3":0.0962,"2":0.1146,"1":0.1534,"1/0":0.1825,"2/0":0.2190,"3/0":0.2642,"4/0":0.3197,"250":0.3904,"300":0.4536,"350":0.5166,"400":0.5782,"500":0.6984,"600":0.8709,"750":1.0532},
+  NMB:  {"14/2":0.198,"14/3":0.233,"12/2":0.242,"12/3":0.290,"10/2":0.294,"10/3":0.353}
+};
+const CM = {"14":4110,"12":6530,"10":10380,"8":16510,"6":26240,"4":41740,"3":52620,"2":66360,"1":83690,"1/0":105600,"2/0":133100,"3/0":167800,"4/0":211600,"250":250000,"300":300000,"350":350000,"400":400000,"500":500000,"600":600000,"750":750000};
+/* ── GROUNDING DATA ── */
+const CM_EXT = Object.assign({}, {"14":4110,"12":6530,"10":10380,"8":16510,"6":26240,"4":41740,"3":52620,"2":66360,"1":83690,"1/0":105600,"2/0":133100,"3/0":167800,"4/0":211600,"250":250000,"300":300000,"350":350000,"400":400000,"500":500000,"600":600000,"700":700000,"750":750000,"800":800000,"900":900000,"1000":1000000,"1100":1100000,"1200":1200000,"1500":1500000,"1750":1750000,"2000":2000000});
+const EGC_TBL = [[15,'14','12'],[20,'12','10'],[30,'10','8'],[40,'10','8'],[60,'10','8'],[100,'8','6'],[200,'6','4'],[300,'4','2'],[400,'3','1'],[500,'2','1/0'],[600,'1','2/0'],[800,'1/0','3/0'],[1000,'2/0','4/0'],[1200,'3/0','250'],[1600,'4/0','350'],[2000,'250','400'],[2500,'350','600'],[3000,'400','600'],[4000,'500','800'],[5000,'700','1200'],[6000,'800','1200']];
+const GEC_TBL = [
+  {cuBound:66360,   alBound:105600,  cuGEC:'8',   alGEC:'6',   cuLbl:'≤ 2 AWG',           alLbl:'≤ 1/0 AWG'},
+  {cuBound:105600,  alBound:167800,  cuGEC:'6',   alGEC:'4',   cuLbl:'1–1/0 AWG',         alLbl:'2/0–3/0 AWG'},
+  {cuBound:167800,  alBound:250000,  cuGEC:'4',   alGEC:'2',   cuLbl:'2/0–3/0 AWG',       alLbl:'4/0–250 kcmil'},
+  {cuBound:350000,  alBound:500000,  cuGEC:'2',   alGEC:'1/0', cuLbl:'4/0–350 kcmil',     alLbl:'>250–500 kcmil'},
+  {cuBound:600000,  alBound:900000,  cuGEC:'1/0', alGEC:'3/0', cuLbl:'>350–600 kcmil',    alLbl:'>500–900 kcmil'},
+  {cuBound:1100000, alBound:1750000, cuGEC:'2/0', alGEC:'4/0', cuLbl:'>600–1100 kcmil',   alLbl:'>900–1750 kcmil'},
+  {cuBound:Infinity,alBound:Infinity,cuGEC:'3/0', alGEC:'250', cuLbl:'>1100 kcmil',       alLbl:'>1750 kcmil'}
+];
+const GEC_CU_SIZES = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500','600','700','750','800','900','1000','1100','1200','1500','1750','2000'];
+const GEC_AL_SIZES = ['12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500','600','700','750','800','900','1000','1100','1200','1500','1750','2000'];
+
+const AMP_CU = {"14":[15,20,25],"12":[20,25,30],"10":[30,35,40],"8":[40,50,55],"6":[55,65,75],"4":[70,85,95],"3":[85,100,115],"2":[95,115,130],"1":[110,130,145],"1/0":[125,150,170],"2/0":[145,175,195],"3/0":[165,200,225],"4/0":[195,230,260],"250":[215,255,290],"300":[240,285,320],"350":[260,310,350],"400":[280,335,380],"500":[320,380,430],"600":[355,420,475],"750":[400,475,535]};
+const AMP_AL = {"12":[15,20,25],"10":[25,30,35],"8":[30,40,45],"6":[40,50,60],"4":[55,65,75],"3":[65,75,85],"2":[75,90,100],"1":[85,100,115],"1/0":[100,120,135],"2/0":[115,135,150],"3/0":[130,155,175],"4/0":[150,180,205],"250":[170,205,230],"300":[190,230,255],"350":[210,250,280],"400":[225,270,305],"500":[260,310,350],"600":[285,340,385],"750":[320,385,435]};
+const TEMP_F = {10:[1.29,1.20,1.15],15:[1.22,1.15,1.12],20:[1.15,1.11,1.08],25:[1.08,1.05,1.04],30:[1.00,1.00,1.00],35:[0.91,0.94,0.96],40:[0.82,0.88,0.91],45:[0.71,0.82,0.87],50:[0.58,0.75,0.82],55:[0.41,0.67,0.76],60:[null,0.58,0.71],70:[null,0.33,0.58],80:[null,null,0.41]};
+const T_IDX = {60:0,75:1,90:2};
+const SZ_LBL = sz => sz.includes('/') || isNaN(+sz) ? sz : +sz >= 250 ? sz+' kcmil' : sz+' AWG';
+const COND_LBL = {"0.5":'½"',"0.75":'¾"',"1":'1"',"1.25":'1¼"',"1.5":'1½"',"2":'2"',"2.5":'2½"',"3":'3"',"3.5":'3½"',"4":'4"'};
+
+/* ── TAB SWITCH ── */
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'tables') { renderAmpTable('CU'); renderAreaTable(); renderConduitTable(); }
+}
+
+/* ── GROUNDING ── */
+let gndActiveType = 'EGC'; // tracks which section is showing
+
+function switchGndType(type) {
+  gndActiveType = type;
+  const isEGC = type === 'EGC';
+  document.getElementById('gnd_egc_section').style.display = isEGC ? '' : 'none';
+  document.getElementById('gnd_gec_section').style.display = isEGC ? 'none' : '';
+  document.getElementById('gnd_subtitle').textContent = isEGC
+    ? 'Equipment Grounding Conductor — NEC 250.122'
+    : 'Grounding Electrode Conductor — NEC 250.66';
+  const accentStyle  = 'border:2px solid var(--accent);background:var(--accent);color:#fff;';
+  const inactiveStyle = 'border:2px solid var(--border);background:var(--surface2);color:var(--text2);';
+  document.getElementById('gnd_btn_egc').style.cssText = document.getElementById('gnd_btn_egc').style.cssText.replace(/border.*?;color:[^;]+;/gs, '') + (isEGC ? accentStyle : inactiveStyle);
+  document.getElementById('gnd_btn_gec').style.cssText = document.getElementById('gnd_btn_gec').style.cssText.replace(/border.*?;color:[^;]+;/gs, '') + (isEGC ? inactiveStyle : accentStyle);
+  runGnd();
+}
+
+function toggleEgcProp() {
+  document.getElementById('egc_prop_group').style.display =
+    document.getElementById('egc_prop').checked ? 'grid' : 'none';
+}
+
+function updateGecSizes() {
+  const mat = document.getElementById('gec_semat').value;
+  const sizes = mat === 'CU' ? GEC_CU_SIZES : GEC_AL_SIZES;
+  const sel = document.getElementById('gec_sesz');
+  const curr = sel.value;
+  sel.innerHTML = sizes.map(s => `<option value="${s}"${s===curr?' selected':''}>${SZ_LBL(s)}</option>`).join('');
+}
+
+function runGnd() {
+  /* ─ EGC ─ */
+  const ocpd   = +document.getElementById('egc_ocpd').value;
+  const egcMat = document.getElementById('egc_mat').value;
+  const prop   = document.getElementById('egc_prop').checked;
+  const row    = EGC_TBL.find(r => r[0] === ocpd);
+  const baseEgc = row ? (egcMat==='CU' ? row[1] : row[2]) : null;
+  let finalEgc = baseEgc, propLine = '';
+
+  if (prop && baseEgc) {
+    const phMin = document.getElementById('egc_phase_min').value;
+    const phAct = document.getElementById('egc_phase_act').value;
+    const cmMin = CM_EXT[phMin], cmAct = CM_EXT[phAct], cmBase = CM_EXT[baseEgc];
+    if (cmMin && cmAct && cmBase && cmAct > cmMin) {
+      const reqCM = (cmAct / cmMin) * cmBase;
+      const propSz = SIZES.find(s => CM_EXT[s] >= reqCM) || '750';
+      finalEgc = propSz;
+      propLine = `<div class="note" style="margin-top:10px;font-size:0.82rem;">
+        <strong>Proportional calc (NEC 250.122(B)):</strong> (${CM_EXT[phAct].toLocaleString()} CM ÷ ${CM_EXT[phMin].toLocaleString()} CM) × ${CM_EXT[baseEgc].toLocaleString()} CM = ${Math.round(reqCM).toLocaleString()} CM → <strong>${SZ_LBL(propSz)}</strong>
+      </div>`;
+    }
+  }
+
+  const egcEl = document.getElementById('egc_results');
+  if (!finalEgc) { egcEl.innerHTML = `<div class="note">Select a valid OCPD rating.</div>`; }
+  else {
+    egcEl.innerHTML = `<div class="results-row">
+      <div class="result-card good">
+        <div class="result-label">Min EGC Size</div>
+        <div class="result-value lg" style="color:var(--green)">${SZ_LBL(finalEgc)}</div>
+        <div class="result-sub">${egcMat==='CU'?'Copper':'Aluminum/CCA'} — NEC Table 250.122</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">OCPD Rating</div>
+        <div class="result-value">${ocpd}A</div>
+        <div class="result-sub">Overcurrent protective device</div>
+      </div>
+      ${prop && baseEgc !== finalEgc ? `<div class="result-card warn">
+        <div class="result-label">Base Table Size</div>
+        <div class="result-value">${SZ_LBL(baseEgc)}</div>
+        <div class="result-sub">Increased by 250.122(B)</div>
+      </div>` : ''}
+    </div>${propLine}`;
+  }
+
+  /* ─ GEC ─ */
+  const seMat   = document.getElementById('gec_semat').value;
+  const seSz    = document.getElementById('gec_sesz').value;
+  const gecMat  = document.getElementById('gec_mat').value;
+  const elecTyp = document.getElementById('gec_elec').value;
+  const seCM    = CM_EXT[seSz];
+  const gecRow  = seCM ? GEC_TBL.find(r => seCM <= (seMat==='CU' ? r.cuBound : r.alBound)) : null;
+  const baseGec = gecRow ? (gecMat==='CU' ? gecRow.cuGEC : gecRow.alGEC) : null;
+  let finalGec = baseGec, capNote = '';
+
+  if (finalGec) {
+    const gecCM = CM_EXT[finalGec];
+    if (elecTyp === 'rod') {
+      const cap = gecMat==='CU' ? '6' : '4';
+      if (gecCM > CM_EXT[cap]) { finalGec = cap; capNote = `<div class="note" style="margin-top:8px;font-size:0.82rem;"><strong>NEC 250.66(A):</strong> For rod, pipe, and plate electrodes, the GEC is not required to exceed ${SZ_LBL(cap)} ${gecMat==='CU'?'copper':'aluminum'}.</div>`; }
+    } else if (elecTyp === 'concrete' && gecMat==='CU') {
+      if (gecCM > CM_EXT['4']) { finalGec = '4'; capNote = `<div class="note" style="margin-top:8px;font-size:0.82rem;"><strong>NEC 250.66(B):</strong> For concrete-encased electrodes, the GEC is not required to exceed 4 AWG copper.</div>`; }
+    } else if (elecTyp === 'ring') {
+      capNote = `<div class="note" style="margin-top:8px;font-size:0.82rem;"><strong>NEC 250.66(C):</strong> GEC for a ground ring shall not be required to exceed the conductor used for the ground ring. Minimum 2 AWG copper required.</div>`;
+    }
+  }
+
+  const gecEl = document.getElementById('gec_results');
+  if (!finalGec) { gecEl.innerHTML = `<div class="note">Select a valid service conductor size.</div>`; }
+  else {
+    const elecLbls = {general:'General',rod:'Rod / Pipe / Plate',concrete:'Concrete-Encased',ring:'Ground Ring'};
+    gecEl.innerHTML = `<div class="results-row">
+      <div class="result-card good">
+        <div class="result-label">Min GEC Size</div>
+        <div class="result-value lg" style="color:var(--green)">${SZ_LBL(finalGec)}</div>
+        <div class="result-sub">${gecMat==='CU'?'Copper':'Aluminum/CCA'} — NEC Table 250.66</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">SE Conductor</div>
+        <div class="result-value">${SZ_LBL(seSz)}</div>
+        <div class="result-sub">${seMat==='CU'?'Copper':'Aluminum/CCA'} service conductor</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Electrode Type</div>
+        <div class="result-value" style="font-size:0.9rem;">${elecLbls[elecTyp]}</div>
+        <div class="result-sub">NEC 250.66${elecTyp==='general'?'':elecTyp==='rod'?' (A)':elecTyp==='concrete'?' (B)':' (C)'}</div>
+      </div>
+    </div>${capNote}`;
+  }
+}
+
+function initGnd() {
+  /* Render EGC reference table */
+  document.getElementById('egc_ref_tbl').innerHTML = EGC_TBL.map(([a,cu,al]) =>
+    `<tr><td>${a}A</td><td>${SZ_LBL(cu)}</td><td>${SZ_LBL(al)}</td></tr>`
+  ).join('');
+  /* Populate phase-size selects for proportional EGC */
+  const phOpts = SIZES.map(s => `<option value="${s}">${SZ_LBL(s)}</option>`).join('');
+  document.getElementById('egc_phase_min').innerHTML = phOpts;
+  document.getElementById('egc_phase_act').innerHTML = phOpts;
+  /* Populate GEC SE size dropdown (default copper) */
+  updateGecSizes();
+}
+
+/* ── CONDUIT FILL ── */
+let wires = [], wid = 0;
+const sizeOpts = SIZES.map(s => `<option value="${s}">${SZ_LBL(s)}</option>`).join('');
+
+function addWire() {
+  const id = ++wid;
+  wires.push(id);
+  const d = document.createElement('div');
+  d.className = 'wire-item'; d.id = 'wi_'+id;
+  d.innerHTML = `
+    <select id="wt_${id}" onchange="runFill()">
+      <option value="THHN">THHN/THWN-2</option>
+      <option value="XHHW">XHHW</option>
+      <option value="NMB">NM-B (cable)</option>
+    </select>
+    <select id="ws_${id}" onchange="runFill()">${sizeOpts}</select>
+    <div class="qty-wrap">
+      <label>Qty</label>
+      <input type="number" id="wq_${id}" value="1" min="1" max="99" oninput="runFill()" style="width:54px;padding:10px 8px;text-align:center;">
+    </div>
+    <button class="btn btn-danger-ghost" onclick="removeWire(${id})">✕</button>`;
+  document.getElementById('wire_list').appendChild(d);
+  runFill();
+}
+
+function removeWire(id) {
+  document.getElementById('wi_'+id)?.remove();
+  wires = wires.filter(x => x !== id);
+  runFill();
+}
+
+function clearWires() {
+  wires.forEach(id => document.getElementById('wi_'+id)?.remove());
+  wires = [];
+  document.getElementById('fill_results').innerHTML = `<div class="empty-state"><div class="es-icon">📐</div>Add conductors above to calculate fill</div>`;
+}
+
+function getArea(type, size) {
+  if (type === 'THHN') return WIRE_A.THHN[size];
+  if (type === 'XHHW') return WIRE_A.XHHW[size];
+  if (type === 'NMB')  return WIRE_A.NMB[size];
+  return null;
+}
+
+function runFill() {
+  const ctype = document.getElementById('fill_type').value;
+  const csize = document.getElementById('fill_size').value;
+  const totalArea = CONDUIT[ctype][csize];
+  let wireArea = 0, qty = 0, rows = '', valid = true;
+
+  for (const id of wires) {
+    if (!document.getElementById('wi_'+id)) continue;
+    const t = document.getElementById('wt_'+id).value;
+    const s = document.getElementById('ws_'+id).value;
+    const q = Math.max(1, parseInt(document.getElementById('wq_'+id).value)||1);
+    const a = getArea(t, s);
+    if (!a) { valid = false; continue; }
+    wireArea += a * q; qty += q;
+    const tname = t === 'NMB' ? 'NM-B' : t;
+    rows += `<tr><td>${tname}</td><td>${s}</td><td style="text-align:center">${q}</td><td>${a.toFixed(4)}"²</td><td>${(a*q).toFixed(4)}"²</td></tr>`;
+  }
+
+  if (!valid || wires.length === 0) {
+    document.getElementById('fill_results').innerHTML = `<div class="empty-state"><div class="es-icon">📐</div>Add conductors above to calculate fill</div>`;
+    return;
+  }
+
+  const maxPct = qty === 1 ? 0.53 : qty === 2 ? 0.31 : 0.40;
+  const maxPctLabel = qty === 1 ? '53%' : qty === 2 ? '31%' : '40%';
+  const maxArea = totalArea * maxPct;
+  const fillPct = (wireArea / totalArea) * 100;
+  const pass = wireArea <= maxArea;
+  const barColor = !pass ? 'var(--red)' : fillPct > maxPct*100*0.85 ? 'var(--yellow)' : 'var(--green)';
+  const barW = Math.min((fillPct / (maxPct * 100)) * 100, 100);
+  const conduitName = {EMT:'EMT',RMC:'RMC',PVC40:'PVC Sch 40',PVC80:'PVC Sch 80'}[ctype];
+
+  let suggest = '';
+  if (!pass) {
+    const next = Object.entries(CONDUIT[ctype]).find(([k,a]) => a * maxPct >= wireArea);
+    if (next) suggest = `<div class="note warn-note"><strong>Overfill — </strong>Minimum conduit size: <strong>${COND_LBL[next[0]]} ${conduitName}</strong></div>`;
+  }
+
+  document.getElementById('fill_results').innerHTML = `
+    <div class="card">
+      <div class="results-row">
+        <div class="result-card ${pass ? 'good' : 'bad'}">
+          <div class="result-label">Fill %</div>
+          <div class="result-value" style="color:${barColor}">${fillPct.toFixed(1)}%</div>
+          <div class="result-sub">${conduitName} ${COND_LBL[csize]}</div>
+          <div style="margin-top:8px"><span class="badge ${pass?'badge-good':'badge-bad'}">${pass?'✓ PASS':'✗ FAIL'}</span></div>
+        </div>
+        <div class="result-card">
+          <div class="result-label">Wire Area</div>
+          <div class="result-value" style="font-size:1.4rem;">${wireArea.toFixed(4)}"²</div>
+          <div class="result-sub">of ${maxArea.toFixed(4)}"² max (${maxPctLabel})</div>
+        </div>
+        <div class="result-card amber">
+          <div class="result-label">Conduit Area</div>
+          <div class="result-value" style="font-size:1.4rem;">${totalArea}"²</div>
+          <div class="result-sub">Total internal area</div>
+        </div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-bar" style="width:${barW}%;background:${barColor};"></div>
+      </div>
+      <div class="prog-labels">
+        <span>0%</span><span style="color:var(--accent)">${maxPctLabel} max</span><span>${(maxPct*100*1.2).toFixed(0)}%</span>
+      </div>
+      <div style="overflow-x:auto;margin-top:14px;">
+        <table class="data-table">
+          <thead><tr><th>Type</th><th>Size</th><th>Qty</th><th>Area Each</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            ${rows}
+            <tr class="highlight"><td colspan="4">Total Wire Area</td><td>${wireArea.toFixed(4)}"²</td></tr>
+          </tbody>
+        </table>
+      </div>
+      ${suggest}
+    </div>`;
+}
+
+/* ── AMPACITY ── */
+/* Sizes eligible for paralleling per NEC 310.10(H)(1) — 1/0 AWG and larger */
+const PARALLEL_OK = new Set(['1/0','2/0','3/0','4/0','250','300','350','400','500','600','750']);
+
+function toggleParallel() {
+  const parallel = parseInt(document.getElementById('a_parallel').value);
+  const raceGroup = document.getElementById('a_raceway_group');
+  raceGroup.style.display = parallel > 1 ? 'flex' : 'none';
+}
+
+function runAmp() {
+  const mat      = document.getElementById('a_mat').value;
+  const size     = document.getElementById('a_size').value;
+  const ins      = +document.getElementById('a_ins').value;
+  const ccc      = +document.getElementById('a_ccc').value;
+  const amb      = +document.getElementById('a_temp').value;
+  const term     = +document.getElementById('a_term').value;
+  const parallel = parseInt(document.getElementById('a_parallel').value);
+  const raceway  = document.getElementById('a_raceway').value;
+
+  /* ── NEC 310.10(H) parallel compliance note ── */
+  const noteEl = document.getElementById('parallel_note');
+  if (parallel > 1) {
+    const sizeOk = PARALLEL_OK.has(size);
+    if (!sizeOk) {
+      noteEl.innerHTML = `<div class="note warn-note" style="margin-top:10px;"><strong>NEC 310.10(H)(1) Violation —</strong> Conductors smaller than 1/0 AWG cannot be paralleled. Select 1/0 AWG or larger.</div>`;
+    } else {
+      const raceNote = raceway === 'combined'
+        ? `All ${parallel} sets in the same raceway — CCC count = your selected derating factor applies to <strong>all</strong> conductors combined.`
+        : `Separate raceways — CCC derating factor applies <strong>per raceway</strong> independently.`;
+      noteEl.innerHTML = `<div class="note" style="margin-top:10px;">
+        <strong>NEC 310.10(H) Requirements:</strong> All ${parallel} conductors per phase must be the same length, material, AWG/kcmil, insulation type, and termination method.<br>
+        <span style="color:var(--text2);margin-top:4px;display:block;">${raceNote}</span>
+      </div>`;
+    }
+  } else {
+    noteEl.innerHTML = '';
+  }
+
+  const tbl = mat === 'CU' ? AMP_CU : AMP_AL;
+  const base = tbl[size];
+  if (!base) {
+    document.getElementById('amp_results').innerHTML = `<div class="note"><strong>Note:</strong> ${mat==='AL'?'Aluminum':'Copper'} conductors in NEC Table 310.12 start at ${mat==='AL'?'12':'14'} AWG.</div>`;
+    return;
+  }
+
+  const iIdx = T_IDX[ins];
+  const tIdx = T_IDX[term];
+  const tf   = TEMP_F[amb]?.[iIdx];
+
+  if (tf === null || tf === undefined) {
+    document.getElementById('amp_results').innerHTML = `<div class="result-card bad" style="margin-top:0"><div class="result-label">Result</div><div class="result-value" style="color:var(--red)">N/A</div><div class="result-sub">Ambient temperature exceeds insulation rating. Select a higher-rated insulation type.</div></div>`;
+    return;
+  }
+
+  const baseAmp    = base[iIdx];
+  const derated    = baseAmp * tf * ccc;
+  const termLim    = base[tIdx];
+  const singleFinal = Math.min(derated, termLim);
+  const limited    = singleFinal < derated - 0.5;
+  const cccLabel   = ccc === 1 ? 'None' : `${Math.round(ccc*100)}%`;
+
+  /* Parallel: total = individual × count; flag size violation */
+  const parallelOk   = parallel === 1 || PARALLEL_OK.has(size);
+  const totalFinal   = Math.floor(singleFinal) * parallel;
+  const matLabel     = mat === 'CU' ? 'Copper' : 'Aluminum';
+  const parallelBadge = !parallelOk
+    ? `<div style="margin-top:6px"><span class="badge badge-bad">✗ Min 1/0 AWG req. — NEC 310.10(H)</span></div>`
+    : parallel > 1 ? `<div style="margin-top:6px"><span class="badge badge-blue">${parallel} sets in parallel</span></div>` : '';
+
+  document.getElementById('amp_results').innerHTML = `
+    <div class="card">
+      <div class="results-row">
+        ${parallel > 1 ? `
+        <div class="result-card ${parallelOk ? 'good' : 'bad'}">
+          <div class="result-label">Total Parallel Ampacity</div>
+          <div class="result-value lg" style="color:${parallelOk ? 'var(--green)' : 'var(--red)'}">${parallelOk ? totalFinal+'A' : 'N/A'}</div>
+          <div class="result-sub">${parallel} × ${Math.floor(singleFinal)}A per conductor</div>
+          ${parallelBadge}
+        </div>` : ''}
+        <div class="result-card good">
+          <div class="result-label">${parallel > 1 ? 'Per-Conductor Ampacity' : 'Allowable Ampacity'}</div>
+          <div class="result-value ${parallel > 1 ? '' : 'lg'}" style="color:var(--green)">${Math.floor(singleFinal)}A</div>
+          <div class="result-sub">${matLabel} ${SZ_LBL(size)} · ${ins}°C ins · ${term}°C terminal</div>
+          ${limited ? `<div style="margin-top:6px"><span class="badge badge-warn">⚠ Terminal Limited</span></div>` : ''}
+        </div>
+        <div class="result-card">
+          <div class="result-label">Base Ampacity</div>
+          <div class="result-value">${baseAmp}A</div>
+          <div class="result-sub">Before derating · NEC Table 310.12</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:14px;">
+        <table class="data-table">
+          <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Base ${ins}°C Ampacity</td><td>${baseAmp}A</td></tr>
+            <tr><td>Ambient Temp Correction</td><td>× ${tf.toFixed(2)}</td></tr>
+            <tr><td>CCC Bundle Adjustment</td><td>× ${ccc.toFixed(2)} (${cccLabel})</td></tr>
+            <tr><td>After Derating</td><td>${derated.toFixed(1)}A</td></tr>
+            <tr><td>Terminal Limit (${term}°C)</td><td>${termLim}A</td></tr>
+            <tr class="highlight"><td>Per-Conductor Allowable Ampacity</td><td>${Math.floor(singleFinal)}A</td></tr>
+            ${parallel > 1 ? `
+            <tr><td>Parallel Sets</td><td>${parallel} conductors per phase</td></tr>
+            <tr class="highlight"><td>Total System Ampacity (${parallel} × ${Math.floor(singleFinal)}A)</td><td>${parallelOk ? totalFinal+'A' : '⚠ Size violation — NEC 310.10(H)'}</td></tr>
+            ` : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* ── VOLTAGE DROP ── */
+function runVD() {
+  const V  = +document.getElementById('vd_v').value;
+  const ph = +document.getElementById('vd_ph').value;
+  const K  = +document.getElementById('vd_mat').value;
+  const sz = document.getElementById('vd_sz').value;
+  const I  = +document.getElementById('vd_a').value || 0;
+  const L  = +document.getElementById('vd_l').value || 0;
+  if (!I || !L) { document.getElementById('vd_results').innerHTML=''; return; }
+
+  const mult = ph === 3 ? Math.sqrt(3) : 2;
+  const cm   = CM[sz];
+  const VD   = (mult * K * I * L) / cm;
+  const pct  = (VD / V) * 100;
+  const Vload = V - VD;
+
+  const status = pct > 5 ? 'bad' : pct > 3 ? 'warn' : 'good';
+  const color  = pct > 5 ? 'var(--red)' : pct > 3 ? 'var(--yellow)' : 'var(--green)';
+  const label  = pct > 5 ? '✗ Exceeds 5%' : pct > 3 ? '⚠ Over 3% Rec.' : '✓ Under 3%';
+  const bClass = pct > 5 ? 'badge-bad' : pct > 3 ? 'badge-warn' : 'badge-good';
+  const barW   = Math.min((pct / 7) * 100, 100);
+  const matLabel = K === 12.9 ? 'Copper' : 'Aluminum';
+
+  document.getElementById('vd_results').innerHTML = `
+    <div class="card">
+      <div class="results-row">
+        <div class="result-card ${status}">
+          <div class="result-label">Voltage Drop</div>
+          <div class="result-value lg" style="color:${color}">${pct.toFixed(2)}%</div>
+          <div class="result-sub">${VD.toFixed(2)}V on ${V}V · ${matLabel} ${SZ_LBL(sz)}</div>
+          <div style="margin-top:8px"><span class="badge ${bClass}">${label}</span></div>
+        </div>
+        <div class="result-card">
+          <div class="result-label">Voltage at Load</div>
+          <div class="result-value">${Vload.toFixed(1)}V</div>
+          <div class="result-sub">of ${V}V source</div>
+        </div>
+        <div class="result-card amber">
+          <div class="result-label">Run Details</div>
+          <div class="result-value" style="font-size:1.1rem;">${L}ft · ${I}A</div>
+          <div class="result-sub">${cm.toLocaleString()} CM · ${ph === 3 ? '3-phase' : 'single-phase'}</div>
+        </div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-bar" style="width:${barW}%;background:${color};"></div>
+      </div>
+      <div class="prog-labels">
+        <span>0%</span>
+        <span style="color:var(--green)">3% ✓</span>
+        <span style="color:var(--yellow)">5% ⚠</span>
+        <span>7%</span>
+      </div>
+    </div>`;
+
+  runMinWire();
+}
+
+function runMinWire() {
+  const V   = +document.getElementById('vd_v').value;
+  const ph  = +document.getElementById('vd_ph').value;
+  const K   = +document.getElementById('vd_mat').value;
+  const I   = +document.getElementById('vd_a').value || 0;
+  const L   = +document.getElementById('vd_l').value || 0;
+  const tgt = +document.getElementById('vd_tgt').value / 100;
+  if (!I || !L) return;
+
+  const mult  = ph === 3 ? Math.sqrt(3) : 2;
+  const maxVD = V * tgt;
+  const minCM = (mult * K * I * L) / maxVD;
+  const rec   = SIZES.find(s => CM[s] >= minCM);
+
+  if (!rec) {
+    document.getElementById('vd_minwire').innerHTML = `<div class="note warn-note"><strong>No standard size meets this target.</strong> Consider reducing run length, splitting the circuit, or using a transformer.</div>`;
+    return;
+  }
+
+  const actualVD  = (mult * K * I * L) / CM[rec];
+  const actualPct = (actualVD / V) * 100;
+
+  document.getElementById('vd_minwire').innerHTML = `
+    <div class="result-card good">
+      <div class="result-label">Min Wire for ≤${tgt*100}% VD</div>
+      <div class="result-value" style="color:var(--green)">${SZ_LBL(rec)}</div>
+      <div class="result-sub">Achieves ${actualPct.toFixed(2)}% VD (${actualVD.toFixed(2)}V drop) · Min CM needed: ${Math.ceil(minCM).toLocaleString()}</div>
+    </div>`;
+}
+
+/* ── TABLES ── */
+function renderAmpTable(mat) {
+  const tbl = mat === 'CU' ? AMP_CU : AMP_AL;
+  const lbl = mat === 'CU' ? 'Copper' : 'Aluminum';
+  let rows = '';
+  for (const sz of SIZES) {
+    if (!tbl[sz]) continue;
+    rows += `<tr><td>${SZ_LBL(sz)}</td><td>${tbl[sz][0]}A</td><td>${tbl[sz][1]}A</td><td>${tbl[sz][2]}A</td></tr>`;
+  }
+  document.getElementById('amp_tbl').innerHTML = `
+    <p style="font-size:0.75rem;color:var(--text3);margin-bottom:10px;">${lbl} · ≤3 CCC in raceway · 30°C ambient · NEC Table 310.12</p>
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Size</th><th>60°C (TW)</th><th>75°C (THWN)</th><th>90°C (THHN)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function renderAreaTable() {
+  let rows = '';
+  for (const sz of SIZES) {
+    const t = WIRE_A.THHN[sz], x = WIRE_A.XHHW[sz], c = CM[sz];
+    rows += `<tr><td>${SZ_LBL(sz)}</td><td>${t?.toFixed(4)||'—'}</td><td>${x?.toFixed(4)||'—'}</td><td>${c?.toLocaleString()||'—'}</td></tr>`;
+  }
+  document.getElementById('area_tbl').innerHTML = rows;
+}
+
+function renderConduitTable() {
+  const keys = Object.keys(CONDUIT.EMT);
+  let rows = '';
+  for (const k of keys) {
+    rows += `<tr><td>${COND_LBL[k]}</td><td>${CONDUIT.EMT[k]}</td><td>${CONDUIT.RMC[k]}</td><td>${CONDUIT.PVC40[k]}</td><td>${CONDUIT.PVC80[k]}</td></tr>`;
+  }
+  document.getElementById('conduit_tbl').innerHTML = rows;
+}
+
+/* ── GENERATOR ── */
+function applyGenPreset() {
+  const kva = parseFloat(document.getElementById('gen_preset').value);
+  if (!kva) return;
+  document.getElementById('gen_kva').value = kva;
+  syncKvaKw('kva');
+  runGen();
+}
+
+function syncKvaKw(changed) {
+  const pf = parseFloat(document.getElementById('gen_pf').value) || 0.8;
+  if (changed === 'kva' || changed === 'pf') {
+    const kva = parseFloat(document.getElementById('gen_kva').value);
+    if (!isNaN(kva) && kva > 0) document.getElementById('gen_kw').value = (kva * pf).toFixed(1);
+  } else if (changed === 'kw') {
+    const kw = parseFloat(document.getElementById('gen_kw').value);
+    if (!isNaN(kw) && kw > 0) document.getElementById('gen_kva').value = (kw / pf).toFixed(1);
+  }
+}
+
+function runGen() {
+  const kva        = parseFloat(document.getElementById('gen_kva').value);
+  const pf         = parseFloat(document.getElementById('gen_pf').value) || 0.8;
+  const kw         = parseFloat(document.getElementById('gen_kw').value) || (kva * pf);
+  const V          = parseFloat(document.getElementById('gen_v').value);
+  const ph         = parseInt(document.getElementById('gen_ph').value);
+  const limit      = parseFloat(document.getElementById('gen_limit').value);
+  const wmat       = document.getElementById('gen_wmat').value;
+  const ins        = +document.getElementById('gen_ins').value;
+  const term       = +document.getElementById('gen_term').value;
+  const amb        = +document.getElementById('gen_amb').value;
+  const ccc        = +document.getElementById('gen_ccc').value;
+  const parallelSel= parseInt(document.getElementById('gen_parallel').value); // 0=auto
+  const ocpdRating = parseInt(document.getElementById('gen_ocpd').value);    // 0 = none
+  const useOCPD    = ocpdRating > 0;
+
+  if (!kva || kva <= 0 || !V) {
+    document.getElementById('gen_results').innerHTML = `<div class="empty-state"><div class="es-icon">🔋</div>Enter generator kVA above to calculate</div>`;
+    return;
+  }
+
+  const VA       = kva * 1000;
+  const divisor  = ph === 3 ? (V * Math.sqrt(3)) : V;
+  const fullAmps = VA / divisor;
+  const usableAmps = fullAmps * limit;
+  const minAmps  = fullAmps * 1.15;   // NEC 445.13 (terminals → first OCPD)
+  const ampTarget  = useOCPD ? ocpdRating : minAmps; // NEC 240.4 when OCPD selected
+  const kvar     = Math.sqrt(Math.max(0, kva*kva - kw*kw));
+  const limitPct = Math.round(limit * 100);
+  const phLabel  = ph === 3 ? '3-Phase' : '1-Phase';
+  const matLabel = wmat === 'CU' ? 'Copper' : 'Aluminum';
+  const barColor = limit >= 1.0 ? 'var(--yellow)' : 'var(--green)';
+
+  /* ── Derating factors ── */
+  const iIdx = T_IDX[ins];
+  const tIdx = T_IDX[term];
+  const tf   = TEMP_F[amb]?.[iIdx];
+  const tbl  = wmat === 'CU' ? AMP_CU : AMP_AL;
+
+  /* ── Conductor solver: given n sets, find smallest derated conductor ── */
+  function trySolve(nSets) {
+    if (tf === null || tf === undefined) return null;
+    const target = ampTarget / nSets;   // NEC 240.4 (OCPD) or NEC 445.13 (115% nameplate)
+    for (const sz of SIZES) {
+      const base = tbl[sz];
+      if (!base) continue;
+      if (nSets > 1 && !PARALLEL_OK.has(sz)) continue; // NEC 310.10(H)(1): min 1/0 AWG
+      const baseAmp    = base[iIdx];
+      const termLim    = base[tIdx];
+      const derated    = baseAmp * tf * ccc;
+      const singleFinal = Math.min(derated, termLim);
+      if (singleFinal >= target) {
+        return { sets: nSets, size: sz, baseAmp, derated, termLim,
+                 singleFinal: Math.floor(singleFinal),
+                 totalAmp: Math.floor(singleFinal) * nSets,
+                 limited: singleFinal < derated - 0.5 };
+      }
+    }
+    return null;
+  }
+
+  let sol = null;
+  if (parallelSel === 0) {          // Auto: try 1 set, then 2–6
+    for (let n = 1; n <= 6; n++) { sol = trySolve(n); if (sol) break; }
+  } else {
+    sol = trySolve(parallelSel);
+  }
+
+  /* ── Conductor result card ── */
+  const basisLabel = useOCPD
+    ? `OCPD: ${ocpdRating}A — NEC 240.4`
+    : `NEC 445.13 — 115% nameplate`;
+  const basisAmp = ampTarget.toFixed(1);
+
+  let wireCard = '', wireNote = '';
+  if (tf === null || tf === undefined) {
+    wireCard = `<div class="result-card bad"><div class="result-label">Conductor Sizing</div><div class="result-value" style="color:var(--red);font-size:0.9rem;">Insulation Exceeded</div><div class="result-sub">Ambient ${amb}°C exceeds ${ins}°C insulation rating</div></div>`;
+  } else if (!sol) {
+    wireCard = `<div class="result-card bad"><div class="result-label">Conductor Sizing</div><div class="result-value" style="color:var(--red);font-size:0.9rem;">No Solution</div><div class="result-sub">Cannot satisfy ${basisAmp}A even with 6 × 750 kcmil — verify inputs</div></div>`;
+  } else if (sol.sets === 1) {
+    wireCard = `<div class="result-card amber"><div class="result-label">Min Conductor Size</div><div class="result-value" style="font-size:1.05rem;">${SZ_LBL(sol.size)} ${matLabel}</div><div class="result-sub">Derated: ${sol.singleFinal}A ≥ ${basisAmp}A required · ${basisLabel}</div></div>`;
+  } else {
+    wireCard = `<div class="result-card amber"><div class="result-label">Parallel — ${sol.sets} Sets / Phase</div><div class="result-value" style="font-size:1.05rem;">${SZ_LBL(sol.size)} ${matLabel}</div><div class="result-sub">${sol.sets} × ${sol.singleFinal}A = ${sol.totalAmp}A total ≥ ${basisAmp}A required · ${basisLabel}</div></div>`;
+    wireNote = `<div class="note" style="margin-top:10px;"><strong>NEC 310.10(H) — Parallel:</strong> ${sol.sets} sets of ${SZ_LBL(sol.size)} ${matLabel} per phase. All conductors must be identical in length, AWG/kcmil, insulation type, and termination method.${ccc < 1 ? ` CCC derating (${Math.round(ccc*100)}%) reflects all conductors in the shared raceway.` : ''}</div>`;
+  }
+
+  /* ── Derating detail table ── */
+  const derateTbl = (sol && tf !== null && tf !== undefined) ? `
+    <div style="margin-top:16px;">
+      <div class="sub-label" style="margin-bottom:8px;">Conductor Derating — ${matLabel} ${SZ_LBL(sol.size)}</div>
+      <table class="data-table"><thead><tr><th>Step</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+        ${useOCPD
+          ? `<tr><td>Downstream OCPD Rating (sizing basis)</td><td>${ocpdRating}A</td><td>NEC 240.4</td></tr>`
+          : `<tr><td>Required Ampacity (115% nameplate)</td><td>${minAmps.toFixed(1)}A</td><td>NEC 445.13</td></tr>`
+        }
+        <tr><td>Base Ampacity — ${ins}°C column</td><td>${sol.baseAmp}A</td><td>NEC Table 310.12</td></tr>
+        <tr><td>× Ambient Temp Correction (${amb}°C)</td><td>× ${tf.toFixed(2)}</td><td>NEC Table 310.15(B)(1)(1)</td></tr>
+        <tr><td>× CCC Adjustment (${Math.round(ccc*100)}%)</td><td>× ${ccc.toFixed(2)}</td><td>NEC Table 310.15(C)(1)</td></tr>
+        <tr><td>Derated Ampacity</td><td>${sol.derated.toFixed(1)}A</td><td></td></tr>
+        <tr><td>Terminal Limit (${term}°C)</td><td>${sol.termLim}A</td><td>NEC 110.14(C)</td></tr>
+        <tr class="highlight"><td><strong>Per-Conductor Allowable Ampacity</strong></td><td><strong>${sol.singleFinal}A</strong></td><td><strong>${sol.limited ? 'Terminal limited' : 'Derating controlled'}</strong></td></tr>
+        ${sol.sets > 1 ? `<tr class="highlight"><td><strong>Total System (${sol.sets} × ${sol.singleFinal}A)</strong></td><td><strong>${sol.totalAmp}A</strong></td><td><strong>NEC 310.10(H)</strong></td></tr>` : ''}
+      </tbody></table>
+      ${sol.limited ? `<p style="font-size:0.72rem;color:var(--yellow);margin-top:6px;">⚠ Terminal rating (${term}°C) is the controlling limit, not conductor derating — NEC 110.14(C).</p>` : ''}
+    </div>` : '';
+
+  /* ── Voltage table ── */
+  const voltages = ph === 3 ? [208, 240, 277, 480, 600] : [120, 208, 240, 277];
+  let vRows = '';
+  for (const v of voltages) {
+    const fa = VA / (ph === 3 ? v * Math.sqrt(3) : v);
+    vRows += `<tr${v === V ? ' class="highlight"' : ''}><td>${v}V ${phLabel}${v === V ? ' ★' : ''}</td><td>${fa.toFixed(1)}A</td><td>${(fa*0.8).toFixed(1)}A</td><td>${(fa*1.15).toFixed(1)}A</td></tr>`;
+  }
+
+  document.getElementById('gen_results').innerHTML = `
+    <div class="card">
+      <div class="results-row">
+        <div class="result-card good">
+          <div class="result-label">Usable Amps (${limitPct}% Limit)</div>
+          <div class="result-value lg" style="color:${barColor}">${usableAmps.toFixed(1)}A</div>
+          <div class="result-sub">${V}V ${phLabel} · ${kva} kVA · PF ${pf}</div>
+        </div>
+        <div class="result-card">
+          <div class="result-label">Full Nameplate Amps</div>
+          <div class="result-value">${fullAmps.toFixed(1)}A</div>
+          <div class="result-sub">100% of rated output</div>
+        </div>
+        ${wireCard}
+      </div>
+      ${wireNote}
+      ${derateTbl}
+      <div style="margin-top:16px;">
+        <div class="sub-label" style="margin-bottom:8px;">Power Breakdown</div>
+        <div class="results-row">
+          <div class="result-card"><div class="result-label">Apparent Power</div><div class="result-value" style="font-size:1.3rem;">${kva} kVA</div></div>
+          <div class="result-card"><div class="result-label">Real Power (kW)</div><div class="result-value" style="font-size:1.3rem;">${kw.toFixed(1)} kW</div><div class="result-sub">PF = ${pf}</div></div>
+          <div class="result-card"><div class="result-label">Reactive Power</div><div class="result-value" style="font-size:1.3rem;">${kvar.toFixed(1)} kVAR</div></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="sub-label" style="margin-bottom:8px;">Amps at All Voltages — ${kva} kVA ${phLabel}</div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead><tr><th>Voltage</th><th>Full Amps (100%)</th><th>Usable @ 80%</th><th>Min Conductor (115%)</th></tr></thead>
+            <tbody>${vRows}</tbody>
+          </table>
+        </div>
+        <p style="font-size:0.7rem;color:var(--text3);margin-top:6px;">★ Highlighted row = currently selected voltage</p>
+      </div>
+    </div>`;
+}
+
+/* ── PDF EXPORT ── */
+const NEC_CITES = {
+  fill: [
+    { ref: 'NEC Chapter 9, Table 1',
+      desc: 'Percent of Cross Section of Conduit and Tubing for Conductors — Maximum fill: 1 conductor = 53%, 2 conductors = 31%, 3 or more conductors = 40% of total conduit cross-sectional area.' },
+    { ref: 'NEC Chapter 9, Table 4',
+      desc: 'Dimensions and Percent Area of Conduit and Tubing — Internal cross-sectional area (in²) for standard trade sizes of EMT, RMC, and PVC conduit types used to determine available fill area.' },
+    { ref: 'NEC Chapter 9, Table 5',
+      desc: 'Dimensions of Insulated Conductors and Fixture Wires — Cross-sectional area (in²) of THHN/THWN-2, XHHW, and NM-B conductor types used to calculate total conductor fill.' },
+    { ref: 'NEC 358.22 / 344.22 / 352.22',
+      desc: 'Number of Conductors in Conduit — Conduit or tubing shall not contain more conductors than permitted by Chapter 9, Table 1. Cable assemblies are filled based on overall cross-sectional area.' },
+  ],
+  ampacity: [
+    { ref: 'NEC Table 310.12',
+      desc: 'Ampacities of Conductors Rated 0–2000V, Not More Than Three Current-Carrying Conductors in Raceway, 30°C Ambient — Provides base ampacity values for copper and aluminum conductors at 60°C, 75°C, and 90°C temperature ratings.' },
+    { ref: 'NEC Tables 310.15(B)(1)(1) & 310.15(B)(1)(2) — 2023 NEC',
+      desc: 'Ambient Temperature Correction Factors — Correction multipliers applied to Table 310.12 base ampacity when the installation ambient temperature differs from the 30°C (86°F) baseline. Table (B)(1)(1) applies to conductors rated 60°C–90°C; Table (B)(1)(2) applies to conductors rated 150°C–250°C.' },
+    { ref: 'NEC Table 310.15(C)(1) — 2023 NEC',
+      desc: 'Adjustment Factors for More Than Three Current-Carrying Conductors in a Raceway or Cable — Bundle derating multipliers: 4–6 conductors = 80%, 7–9 = 70%, 10–20 = 50%, 21–30 = 45%, 31–40 = 40%, 41+ = 35%.' },
+    { ref: 'NEC 110.14(C)',
+      desc: 'Temperature Limitations — Ampacity must not exceed the lowest temperature rating of any connected termination, conductor, or device. Most breakers and lugs are rated 75°C unless marked otherwise.' },
+    { ref: 'NEC 310.10(H)',
+      desc: 'Parallel Conductors — Conductors 1/0 AWG and larger may be connected in parallel. Parallel conductors in the same phase must be the same length, material, AWG/kcmil size, insulation type, and termination method. Conductors smaller than 1/0 AWG shall not be paralleled.' },
+  ],
+  vdrop: [
+    { ref: 'NEC 210.19(A)(1) Info Note No. 4',
+      desc: 'Conductors for branch circuits should be sized to prevent a voltage drop exceeding 3% at the farthest outlet, with total VD (feeder + branch) not to exceed 5%. This is a recommendation, not a mandatory requirement.' },
+    { ref: 'NEC 215.2(A)(1) Info Note No. 2',
+      desc: 'Feeder conductors should be sized to limit voltage drop to 3%, with 5% total for feeders and branch circuits combined. This is a recommendation, not a mandatory requirement.' },
+    { ref: 'Voltage Drop Formula (NEC Annex D)',
+      desc: 'VD = (M × K × I × L) / CM — M = phase multiplier (2 = single-phase, √3 = three-phase), K = resistivity constant (12.9 copper / 21.2 aluminum), I = amperes, L = one-way feet, CM = circular mils.' },
+    { ref: 'NEC Chapter 9, Table 9',
+      desc: 'Conductor Properties — Circular mil values and AC resistance used to verify voltage drop in raceway installations at operating temperature.' },
+  ],
+  generator: [
+    { ref: 'NEC 445.13',
+      desc: 'Ampacity of Conductors from Generator Terminals — Conductors from generator terminals to the first overcurrent device must have an ampacity of not less than 115% of the nameplate current rating of the generator.' },
+    { ref: 'NEC 445.13(A)',
+      desc: 'For generators operated continuously (3 hours or more), conductor ampacity shall be not less than 115% of the nameplate current rating per the continuous load rule.' },
+    { ref: 'NEC 445.12(A)',
+      desc: 'Overcurrent Protection — Constant-voltage generators shall be protected from overloads by inherent design, circuit breakers, fuses, or other acceptable overcurrent protective means.' },
+    { ref: 'NEC 250.30(A)',
+      desc: 'Grounding Separately Derived Systems — Generators used as separately derived systems must be grounded per NEC 250.30(A). The system bonding jumper and grounding electrode conductor must be properly sized.' },
+    { ref: 'NEC Table 310.12',
+      desc: 'Minimum conductor size is found by selecting the smallest conductor whose derated ampacity equals or exceeds 115% of generator nameplate current (NEC 445.13), accounting for ambient temperature and CCC derating.' },
+    { ref: 'NEC Tables 310.15(B)(1)(1) &amp; 310.15(B)(1)(2) — 2023 NEC',
+      desc: 'Ambient Temperature Correction Factors — Ampacity must be multiplied by the correction factor corresponding to the ambient temperature and insulation temperature rating. Based on 30°C standard ambient.' },
+    { ref: 'NEC Table 310.15(C)(1) — 2023 NEC',
+      desc: 'Adjustment Factors for More Than 3 Current-Carrying Conductors — When more than 3 CCC share a raceway, ampacity is reduced: 4–6 conductors = 80%, 7–9 = 70%, 10–20 = 50%, 21–30 = 45%, 31–40 = 40%, 41+ = 35%.' },
+    { ref: 'NEC 110.14(C)',
+      desc: 'Terminal Temperature Limitations — Final conductor ampacity shall not exceed the lowest temperature rating of any connected terminal, device, or conductor. Most breakers and lugs are rated 75°C.' },
+    { ref: 'NEC 310.10(H)',
+      desc: 'Parallel Conductors — Conductors 1/0 AWG and larger may be used in parallel. Each parallel set must be the same length, AWG/kcmil, material, insulation type, and termination method. Each raceway shall contain a complete set of conductors.' },
+  ],
+  ground: [
+    { ref: 'NEC 250.122 / Table 250.122',
+      desc: 'Size of Equipment Grounding Conductors — EGC minimum size is determined by the rating of the overcurrent protective device ahead of the equipment. Applies to copper, aluminum, and copper-clad aluminum conductors.' },
+    { ref: 'NEC 250.122(B)',
+      desc: 'EGC Proportional Increase — Where ungrounded conductors are increased in size above the minimum required, the EGC shall be increased proportionally based on the circular-mil area ratio of the actual to minimum ungrounded conductor size.' },
+    { ref: 'NEC 250.66 / Table 250.66',
+      desc: 'Size of AC Grounding Electrode Conductors — GEC minimum size is determined by the largest service-entrance or equivalent parallel conductor. Maximum sizes may be further limited by electrode type per NEC 250.66(A)–(C).' },
+    { ref: 'NEC 250.66(A) — Rod, Pipe &amp; Plate Electrodes',
+      desc: 'The portion of the GEC that is the sole connection to a rod, pipe, or plate electrode is not required to be larger than 6 AWG copper or 4 AWG aluminum wire.' },
+    { ref: 'NEC 250.66(B) — Concrete-Encased Electrode',
+      desc: 'The portion of the GEC that is the sole connection to a concrete-encased electrode is not required to be larger than 4 AWG copper wire.' },
+    { ref: 'NEC 250.66(C) — Ground Ring',
+      desc: 'The portion of the GEC that is the sole connection to a ground ring is not required to be larger than the conductor used for the ground ring. Minimum 2 AWG copper conductor required.' },
+  ],
+};
+
+const LOGO_URI = 'data:image/webp;base64,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';
+
+function prPageHeader(reportLabel) {
+  return `<div class="pr-pg-header">
+    <img src="${LOGO_URI}" alt="Andersen Electric">
+    <div class="pr-pg-header-right">
+      <div class="pr-app-label">NEC Field Calculator &mdash; NFPA 70, 2023 Edition</div>
+      <div class="pr-rpt-label">${reportLabel}</div>
+    </div>
+  </div>`;
+}
+
+function prTitleBand(title, sub, dateStr) {
+  return `<div class="pr-title-band">
+    <div>
+      <div class="pt-main">${title}</div>
+      <div class="pt-sub">${sub}</div>
+    </div>
+    <div class="pt-date">${dateStr}</div>
+  </div>`;
+}
+
+function prSection(title, content) {
+  return `<div class="pr-section"><div class="pr-sh">${title}</div>${content}</div>`;
+}
+
+function prCitations(calc) {
+  const cites = NEC_CITES[calc];
+  let rows = cites.map(c =>
+    `<div class="pr-cite"><div class="cr">${c.ref}</div><div class="cd">${c.desc}</div></div>`
+  ).join('');
+  return prSection('NEC Code Citations &amp; References', `<div class="pr-cites">${rows}</div>`);
+}
+
+function prFooter() {
+  return `<div class="pr-footer">
+    <div class="pf-disc">References based on NFPA 70, 2023 Edition. Always verify against the edition adopted in your jurisdiction. This report is a field aid and is not a substitute for engineering judgment or review by a licensed electrical engineer.</div>
+    <div class="pf-std">NFPA 70, 2023 Edition<br>National Electrical Code</div>
+  </div>`;
+}
+
+function exportPDF(calc) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'long', day:'numeric' });
+  let html = '';
+  if      (calc === 'fill')      html = buildFillReport(dateStr);
+  else if (calc === 'ampacity')  html = buildAmpReport(dateStr);
+  else if (calc === 'vdrop')     html = buildVDReport(dateStr);
+  else if (calc === 'generator') html = buildGenReport(dateStr);
+  else if (calc === 'ground')    html = buildGndReport(dateStr);
+  document.getElementById('print-report').innerHTML = html;
+  window.print();
+}
+
+function buildFillReport(dateStr) {
+  const ctype = document.getElementById('fill_type').value;
+  const csize = document.getElementById('fill_size').value;
+  const cNames = {EMT:'EMT (Electrical Metallic Tubing)', RMC:'RMC (Rigid Metal Conduit)', PVC40:'PVC Schedule 40', PVC80:'PVC Schedule 80'};
+  const totalArea = CONDUIT[ctype][csize];
+  let wireRows = '', wireArea = 0, qty = 0;
+  for (const id of wires) {
+    if (!document.getElementById('wi_'+id)) continue;
+    const t = document.getElementById('wt_'+id).value;
+    const s = document.getElementById('ws_'+id).value;
+    const q = Math.max(1, parseInt(document.getElementById('wq_'+id).value)||1);
+    const a = getArea(t, s); if (!a) continue;
+    wireArea += a * q; qty += q;
+    wireRows += `<tr><td>${t==='NMB'?'NM-B (cable)':t}</td><td>${s}</td><td style="text-align:center">${q}</td><td>${a.toFixed(4)} in²</td><td>${(a*q).toFixed(4)} in²</td></tr>`;
+  }
+  if (!qty) return prPageHeader('Conduit Fill Report') + prTitleBand('Conduit Fill Calculation','No conductors entered',dateStr) + '<div class="pr-body"><p>Add conductors and export again.</p></div>' + prFooter();
+  const maxPct = qty===1?0.53:qty===2?0.31:0.40;
+  const maxPctLabel = qty===1?'53%':qty===2?'31%':'40%';
+  const maxArea = totalArea * maxPct;
+  const fillPct = (wireArea / totalArea) * 100;
+  const pass = wireArea <= maxArea;
+  const sc = pass?(fillPct>maxPct*100*0.85?'warn':'good'):'bad';
+  const statusText = pass ? '✓  PASS' : '✗  FAIL — OVERFILL';
+  const statusCls  = pass ? (sc==='warn'?'warn':'pass') : 'fail';
+  return prPageHeader('Conduit Fill Report') +
+    prTitleBand('Conduit Fill Calculation Report', `${cNames[ctype]} — ${COND_LBL[csize]} Trade Size`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      <div class="pr-sbox ${sc}"><div class="sbl">Fill Percentage</div><div class="sbv ${statusCls}">${fillPct.toFixed(2)}%</div><div class="sbs">of total conduit area</div></div>
+      <div class="pr-sbox"><div class="sbl">Conductor Area Used</div><div class="sbv">${wireArea.toFixed(4)} in²</div><div class="sbs">of ${maxArea.toFixed(4)} in² max (${maxPctLabel})</div></div>
+      <div class="pr-sbox ${sc}"><div class="sbl">NEC Compliance</div><div class="sbv ${statusCls}" style="font-size:0.95rem;">${statusText}</div><div class="sbs">NEC Ch. 9, Table 1</div></div>
+    </div>` +
+    prSection('Conduit Specification', `<table class="pr-table"><thead><tr><th>Parameter</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+      <tr><td>Conduit Type</td><td>${cNames[ctype]}</td><td>NEC Ch. 9, Table 4</td></tr>
+      <tr><td>Trade Size</td><td>${COND_LBL[csize]}</td><td>NEC Ch. 9, Table 4</td></tr>
+      <tr><td>Total Internal Area</td><td>${totalArea} in²</td><td>NEC Ch. 9, Table 4</td></tr>
+      <tr><td>Number of Conductors</td><td>${qty}</td><td></td></tr>
+      <tr class="pr-hr"><td>Maximum Allowable Fill</td><td>${maxPctLabel} = ${maxArea.toFixed(4)} in²</td><td>NEC Ch. 9, Table 1</td></tr>
+    </tbody></table>`) +
+    prSection('Conductor Schedule', `<table class="pr-table"><thead><tr><th>Insulation</th><th>Size</th><th>Qty</th><th>Area Each</th><th>Subtotal</th></tr></thead>
+    <tbody>${wireRows}<tr class="pr-hr"><td colspan="4"><strong>Total Conductor Area</strong></td><td><strong>${wireArea.toFixed(4)} in²</strong></td></tr></tbody></table>
+    ${!pass ? '<p style="color:#c62828;font-size:0.76rem;margin-top:8px;padding:8px 10px;background:#fff5f5;border:1px solid #f5c6c6;border-radius:4px;">⚠ Overfill — increase conduit size or reduce conductors to comply with NEC Chapter 9, Table 1.</p>' : ''}`) +
+    prCitations('fill') + '</div>' + prFooter();
+}
+
+function buildAmpReport(dateStr) {
+  const mat      = document.getElementById('a_mat').value;
+  const size     = document.getElementById('a_size').value;
+  const ins      = +document.getElementById('a_ins').value;
+  const ccc      = +document.getElementById('a_ccc').value;
+  const amb      = +document.getElementById('a_temp').value;
+  const term     = +document.getElementById('a_term').value;
+  const parallel = parseInt(document.getElementById('a_parallel').value);
+  const raceway  = document.getElementById('a_raceway').value;
+
+  const matLabel   = mat==='CU'?'Copper':'Aluminum';
+  const insulLabel = {90:'THHN / THWN-2 — 90°C',75:'THWN / XHHW — 75°C',60:'TW — 60°C'}[ins];
+  const cccLabels  = {1:'1–3 conductors (no adjustment)',0.8:'4–6 conductors (80%)',0.7:'7–9 conductors (70%)',0.5:'10–20 conductors (50%)',0.45:'21–30 conductors (45%)',0.4:'31–40 conductors (40%)',0.35:'41+ conductors (35%)'};
+
+  const tbl = mat==='CU'?AMP_CU:AMP_AL;
+  const base = tbl[size];
+  if (!base) return prPageHeader('Wire Ampacity Report') + prTitleBand('Wire Ampacity Report','N/A',dateStr) + '<div class="pr-body"><p>No data for selected configuration.</p></div>' + prFooter();
+
+  const iIdx = T_IDX[ins], tIdx = T_IDX[term];
+  const tf   = TEMP_F[amb]?.[iIdx];
+  if (tf===null||tf===undefined) return prPageHeader('Wire Ampacity Report') + prTitleBand('Wire Ampacity Report','N/A',dateStr) + '<div class="pr-body"><p>Ambient temperature exceeds insulation rating.</p></div>' + prFooter();
+
+  const baseAmp     = base[iIdx];
+  const derated     = baseAmp * tf * ccc;
+  const termLim     = base[tIdx];
+  const singleFinal = Math.min(derated, termLim);
+  const limited     = singleFinal < derated - 0.5;
+  const parallelOk  = parallel === 1 || PARALLEL_OK.has(size);
+  const totalFinal  = Math.floor(singleFinal) * parallel;
+
+  /* ── Summary boxes ── */
+  const racewayLabel = raceway === 'combined'
+    ? `All ${parallel} sets in same raceway`
+    : `${parallel} separate raceways`;
+  const parallelSummaryBox = parallel > 1
+    ? `<div class="pr-sbox ${parallelOk?'good':'warn'}">
+         <div class="sbl">Total Parallel Ampacity</div>
+         <div class="sbv ${parallelOk?'pass':'warn'}">${parallelOk ? totalFinal+'A' : 'VIOLATION'}</div>
+         <div class="sbs">${parallelOk ? `${parallel} × ${Math.floor(singleFinal)}A · ${racewayLabel}` : 'Min 1/0 AWG required — NEC 310.10(H)'}</div>
+       </div>`
+    : '';
+
+  /* ── Parallel inputs row ── */
+  const parallelInputRow = parallel > 1
+    ? `<tr><td>Parallel Conductors</td><td>${parallel} sets per phase · ${raceway==='combined'?'Combined raceway':'Separate raceways'} — NEC 310.10(H)</td></tr>`
+    : '<tr><td>Parallel Conductors</td><td>None — single conductor set</td></tr>';
+
+  /* ── Parallel calculation step ── */
+  const parallelCalcStep = parallel > 1
+    ? `<tr class="pr-hr"><td><strong>7 · Total Parallel Ampacity (${parallel} × Step 6)</strong></td>
+         <td><strong>${parallelOk ? totalFinal+'A' : '⚠ Violation — min 1/0 AWG'}</strong></td>
+         <td><strong>NEC 310.10(H)</strong></td></tr>`
+    : '';
+
+  /* ── Violation note ── */
+  const violationNote = (parallel > 1 && !parallelOk)
+    ? `<p style="color:#c62828;font-size:0.76rem;margin-top:8px;padding:8px 10px;background:#fff5f5;border:1px solid #f5c6c6;border-radius:4px;">⚠ NEC 310.10(H)(1) Violation — Conductors smaller than 1/0 AWG cannot be paralleled. Select 1/0 AWG or larger.</p>`
+    : '';
+
+  /* ── Raceway note (combined) ── */
+  const racewayNote = (parallel > 1 && parallelOk && raceway === 'combined')
+    ? `<p style="font-size:0.76rem;margin-top:8px;padding:8px 10px;background:#f0f4ff;border:1px solid #b3c6f5;border-radius:4px;">Note: All ${parallel} sets share the same raceway — CCC derating factor applies to all conductors combined. Verify that your selected CCC count reflects the total conductors in the raceway.</p>`
+    : '';
+
+  return prPageHeader('Wire Ampacity Report') +
+    prTitleBand('Wire Ampacity Calculation Report', `${matLabel} ${SZ_LBL(size)} — ${insulLabel}`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      ${parallelSummaryBox}
+      <div class="pr-sbox good"><div class="sbl">${parallel>1?'Per-Conductor Ampacity':'Final Allowable Ampacity'}</div><div class="sbv pass">${Math.floor(singleFinal)}A</div><div class="sbs">${matLabel} ${SZ_LBL(size)} @ ${term}°C terminal</div></div>
+      <div class="pr-sbox"><div class="sbl">Base Ampacity (Table 310.12)</div><div class="sbv">${baseAmp}A</div><div class="sbs">Before derating factors</div></div>
+      <div class="pr-sbox ${limited?'warn':''}"><div class="sbl">Limiting Factor</div><div class="sbv" style="font-size:0.95rem;">${limited?`Terminal (${term}°C)`:'Conductor Derating'}</div><div class="sbs">${limited?'NEC 110.14(C)':'NEC 310.15(B)/(C) — 2023 NEC'}</div></div>
+    </div>` +
+    prSection('Inputs', `<table class="pr-table"><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>
+      <tr><td>Conductor Material</td><td>${matLabel}</td></tr>
+      <tr><td>Wire Size</td><td>${SZ_LBL(size)}</td></tr>
+      <tr><td>Insulation Type / Rating</td><td>${insulLabel}</td></tr>
+      <tr><td>Current-Carrying Conductors</td><td>${cccLabels[ccc]}</td></tr>
+      <tr><td>Ambient Temperature</td><td>${amb}°C (${Math.round(amb*9/5+32)}°F)</td></tr>
+      <tr><td>Terminal Temperature Rating</td><td>${term}°C — NEC 110.14(C)</td></tr>
+      ${parallelInputRow}
+    </tbody></table>`) +
+    prSection('Calculation Steps', `<table class="pr-table"><thead><tr><th>Step</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+      <tr><td>1 · Base Ampacity (${ins}°C column)</td><td>${baseAmp}A</td><td>NEC Table 310.12</td></tr>
+      <tr><td>2 · × Ambient Temp Correction (${amb}°C)</td><td>× ${tf.toFixed(2)}</td><td>NEC Table 310.15(B)(1)(1) — 2023 NEC</td></tr>
+      <tr><td>3 · × CCC Bundle Adjustment</td><td>× ${ccc.toFixed(2)}</td><td>NEC Table 310.15(C)(1) — 2023 NEC</td></tr>
+      <tr><td>4 · Derated Ampacity (1 × 2 × 3)</td><td>${derated.toFixed(1)}A</td><td></td></tr>
+      <tr><td>5 · Terminal Limit (${term}°C base)</td><td>${termLim}A</td><td>NEC 110.14(C)</td></tr>
+      <tr ${parallel===1?'class="pr-hr"':''}><td><strong>6 · ${parallel===1?'Final Allowable':'Per-Conductor'} Ampacity (lesser of 4 or 5)</strong></td><td><strong>${Math.floor(singleFinal)}A</strong></td><td><strong>${parallel===1?'Controlling value':''}</strong></td></tr>
+      ${parallelCalcStep}
+    </tbody></table>
+    ${limited?`<p style="color:#c62828;font-size:0.76rem;margin-top:8px;padding:8px 10px;background:#fff5f5;border:1px solid #f5c6c6;border-radius:4px;">⚠ Final ampacity is limited by the ${term}°C terminal rating (Step 5), not conductor derating. Per NEC 110.14(C).</p>`:''}
+    ${violationNote}${racewayNote}`) +
+    prCitations('ampacity') + '</div>' + prFooter();
+}
+
+function buildVDReport(dateStr) {
+  const V =+document.getElementById('vd_v').value;
+  const ph=+document.getElementById('vd_ph').value;
+  const K =+document.getElementById('vd_mat').value;
+  const sz= document.getElementById('vd_sz').value;
+  const I =+document.getElementById('vd_a').value||0;
+  const L =+document.getElementById('vd_l').value||0;
+  if (!I||!L) return prPageHeader('Voltage Drop Report') + prTitleBand('Voltage Drop Report','Incomplete inputs',dateStr) + '<div class="pr-body"><p>Enter load current and run length before exporting.</p></div>' + prFooter();
+  const mult=ph===3?Math.sqrt(3):2, cm=CM[sz];
+  const VD=(mult*K*I*L)/cm, pct=(VD/V)*100, Vload=V-VD;
+  const matLabel=K===12.9?'Copper':'Aluminum', phLabel=ph===3?'Three-Phase':'Single-Phase';
+  const multLabel=ph===3?'√3 (1.7321)':'2';
+  const sc=pct>5?'bad':pct>3?'warn':'good';
+  const statusText=pct>5?'✗  Exceeds 5%':pct>3?'⚠  Over 3% Rec.':'✓  Within 3%';
+  const statusCls=pct>5?'fail':pct>3?'warn':'pass';
+  const tgt=+document.getElementById('vd_tgt').value/100;
+  const minCM2=(mult*K*I*L)/(V*tgt);
+  const recSz=SIZES.find(s=>CM[s]>=minCM2);
+  const minWire=recSz?`${SZ_LBL(recSz)} ${matLabel} — ${((mult*K*I*L/CM[recSz]/V)*100).toFixed(2)}% VD`:'No standard size meets target';
+  return prPageHeader('Voltage Drop Report') +
+    prTitleBand('Voltage Drop Calculation Report', `${phLabel} · ${V}V · ${matLabel} ${SZ_LBL(sz)}`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      <div class="pr-sbox ${sc}"><div class="sbl">Voltage Drop</div><div class="sbv ${statusCls}">${pct.toFixed(2)}%</div><div class="sbs">${VD.toFixed(2)}V actual drop</div></div>
+      <div class="pr-sbox"><div class="sbl">Voltage at Load</div><div class="sbv">${Vload.toFixed(1)}V</div><div class="sbs">of ${V}V source voltage</div></div>
+      <div class="pr-sbox ${sc}"><div class="sbl">NEC Status</div><div class="sbv ${statusCls}" style="font-size:0.95rem;">${statusText}</div><div class="sbs">NEC 210.19(A) / 215.2(A)</div></div>
+    </div>` +
+    prSection('Inputs', `<table class="pr-table"><thead><tr><th>Parameter</th><th>Symbol</th><th>Value</th></tr></thead><tbody>
+      <tr><td>System Voltage</td><td>V</td><td>${V}V</td></tr>
+      <tr><td>Circuit Type</td><td>—</td><td>${phLabel}</td></tr>
+      <tr><td>Phase Multiplier</td><td>M</td><td>${multLabel}</td></tr>
+      <tr><td>Conductor Material</td><td>K</td><td>${matLabel} (K = ${K})</td></tr>
+      <tr><td>Wire Size</td><td>—</td><td>${SZ_LBL(sz)}</td></tr>
+      <tr><td>Circular Mils</td><td>CM</td><td>${cm.toLocaleString()} CM</td></tr>
+      <tr><td>Load Current</td><td>I</td><td>${I}A</td></tr>
+      <tr><td>One-Way Run Length</td><td>L</td><td>${L} feet</td></tr>
+    </tbody></table>`) +
+    prSection('Formula &amp; Calculation', `<div class="pr-formula">VD = (M &times; K &times; I &times; L) &divide; CM<br>VD = (${multLabel} &times; ${K} &times; ${I}A &times; ${L}ft) &divide; ${cm.toLocaleString()} = ${VD.toFixed(3)}V<br>VD% = (${VD.toFixed(3)}V &divide; ${V}V) &times; 100 = <strong>${pct.toFixed(2)}%</strong></div>
+    <table class="pr-table"><thead><tr><th>Result</th><th>Value</th><th>Threshold</th><th>Status</th></tr></thead><tbody>
+      <tr><td>Voltage Drop</td><td>${VD.toFixed(3)}V (${pct.toFixed(2)}%)</td><td>3% NEC recommendation</td><td style="color:${pct>3?'#c62828':'#2e7d32'};font-weight:700;">${pct>3?'Above':'Below'} 3%</td></tr>
+      <tr><td>Voltage at Load</td><td>${Vload.toFixed(1)}V</td><td>—</td><td>—</td></tr>
+      <tr class="pr-hr"><td>Min Wire for &le;${tgt*100}% VD</td><td colspan="3">${minWire} &nbsp;·&nbsp; Min CM: ${Math.ceil(minCM2).toLocaleString()}</td></tr>
+    </tbody></table>`) +
+    prCitations('vdrop') + '</div>' + prFooter();
+}
+
+function buildGenReport(dateStr) {
+  const kva        = parseFloat(document.getElementById('gen_kva').value)||0;
+  const pf         = parseFloat(document.getElementById('gen_pf').value)||0.8;
+  const kw         = parseFloat(document.getElementById('gen_kw').value)||(kva*pf);
+  const V          = parseFloat(document.getElementById('gen_v').value);
+  const ph         = parseInt(document.getElementById('gen_ph').value);
+  const limit      = parseFloat(document.getElementById('gen_limit').value);
+  const wmat       = document.getElementById('gen_wmat').value;
+  const ins        = +document.getElementById('gen_ins').value;
+  const term       = +document.getElementById('gen_term').value;
+  const amb        = +document.getElementById('gen_amb').value;
+  const ccc        = +document.getElementById('gen_ccc').value;
+  const parallelSel= parseInt(document.getElementById('gen_parallel').value);
+  const ocpdRating = parseInt(document.getElementById('gen_ocpd').value);
+  const useOCPD    = ocpdRating > 0;
+
+  if (!kva) return prPageHeader('Generator Sizing Report') + prTitleBand('Generator Sizing Report','No data entered',dateStr) + '<div class="pr-body"><p>Enter kVA before exporting.</p></div>' + prFooter();
+
+  const phLabel  = ph===3 ? 'Three-Phase' : 'Single-Phase';
+  const matLabel = wmat==='CU' ? 'Copper' : 'Aluminum';
+  const VA       = kva*1000;
+  const divisor  = ph===3 ? (V*Math.sqrt(3)) : V;
+  const fullAmps = VA/divisor;
+  const usableAmps = fullAmps*limit;
+  const minAmps  = fullAmps*1.15;
+  const ampTarget  = useOCPD ? ocpdRating : minAmps;
+  const kvar     = Math.sqrt(Math.max(0, kva*kva-kw*kw));
+  const limitPct = Math.round(limit*100);
+
+  /* ── Re-run solver for PDF (mirrors runGen logic) ── */
+  const iIdx = T_IDX[ins], tIdx = T_IDX[term];
+  const tf   = TEMP_F[amb]?.[iIdx];
+  const tbl  = wmat==='CU' ? AMP_CU : AMP_AL;
+  function trySolve(nSets) {
+    if (tf===null||tf===undefined) return null;
+    const target = ampTarget/nSets;   // NEC 240.4 (OCPD) or NEC 445.13 (115% nameplate)
+    for (const sz of SIZES) {
+      const base=tbl[sz]; if(!base) continue;
+      if(nSets>1&&!PARALLEL_OK.has(sz)) continue;
+      const baseAmp=base[iIdx], termLim=base[tIdx];
+      const derated=baseAmp*tf*ccc, sf=Math.min(derated,termLim);
+      if(sf>=target) return {sets:nSets,size:sz,baseAmp,derated,termLim,
+        singleFinal:Math.floor(sf),totalAmp:Math.floor(sf)*nSets,limited:sf<derated-0.5};
+    }
+    return null;
+  }
+  let sol=null;
+  if(parallelSel===0){for(let n=1;n<=6;n++){sol=trySolve(n);if(sol)break;}}
+  else{sol=trySolve(parallelSel);}
+
+  /* ── Wire summary ── */
+  let wireSummary, wireBoxCls='';
+  if(!tf&&tf!==0){wireSummary='Ambient exceeds insulation rating';}
+  else if(!sol){wireSummary='No standard solution — verify inputs';}
+  else if(sol.sets===1){wireSummary=`${SZ_LBL(sol.size)} ${matLabel}`; wireBoxCls='amber';}
+  else{wireSummary=`${sol.sets} × ${SZ_LBL(sol.size)} ${matLabel} / phase`; wireBoxCls='amber';}
+
+  const insLbls = {90:'THHN/THWN-2 — 90°C',75:'THWN/XHHW — 75°C',60:'TW — 60°C'};
+  const cccLbls = {1:'1–3 CCC (no adjustment)',0.8:'4–6 CCC (80%)',0.7:'7–9 CCC (70%)',0.5:'10–20 CCC (50%)',0.45:'21–30 CCC (45%)',0.4:'31–40 CCC (40%)',0.35:'41+ CCC (35%)'};
+
+  /* ── Voltage table ── */
+  const voltages = ph===3?[208,240,277,480,600]:[120,208,240,277];
+  let vRows='';
+  for(const v of voltages){
+    const fa=VA/(ph===3?v*Math.sqrt(3):v);
+    vRows+=`<tr${v===V?' class="pr-hr"':''}><td>${v}V ${phLabel}${v===V?' ★':''}</td><td>${fa.toFixed(1)}A</td><td>${(fa*0.8).toFixed(1)}A</td><td>${(fa*1.15).toFixed(1)}A</td></tr>`;
+  }
+
+  return prPageHeader('Generator Sizing Report') +
+    prTitleBand('Generator Sizing Report', `${kva} kVA · ${phLabel} · ${V}V Output`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      <div class="pr-sbox good"><div class="sbl">Usable Amps (${limitPct}% Limit)</div><div class="sbv pass">${usableAmps.toFixed(1)}A</div><div class="sbs">${V}V ${phLabel} · PF ${pf}</div></div>
+      <div class="pr-sbox"><div class="sbl">Full Nameplate Amps</div><div class="sbv">${fullAmps.toFixed(1)}A</div><div class="sbs">100% of rated output</div></div>
+      <div class="pr-sbox ${wireBoxCls}">
+        <div class="sbl">${sol&&sol.sets>1?`Min Conductor (${sol.sets} Sets/Phase)`:'Min Conductor Size'}</div>
+        <div class="sbv" style="font-size:0.9rem;">${wireSummary}</div>
+        <div class="sbs">${useOCPD?`OCPD: ${ocpdRating}A — NEC 240.4`:`NEC 445.13 — 115% = ${minAmps.toFixed(1)}A required`}${sol&&sol.sets>1?` · Total: ${sol.totalAmp}A`:''}</div>
+      </div>
+    </div>` +
+
+    prSection('Generator Nameplate &amp; Output', `<table class="pr-table"><thead><tr><th>Parameter</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+      <tr><td>Apparent Power</td><td>${kva} kVA</td><td>NEC 445.13</td></tr>
+      <tr><td>Power Factor</td><td>${pf}</td><td></td></tr>
+      <tr><td>Real Power</td><td>${kw.toFixed(1)} kW</td><td></td></tr>
+      <tr><td>Reactive Power</td><td>${kvar.toFixed(1)} kVAR</td><td></td></tr>
+      <tr><td>Output Voltage / Phase</td><td>${V}V ${phLabel}</td><td></td></tr>
+      <tr><td>Continuous Load Limit</td><td>${limitPct}%</td><td>NEC 445.13(A)</td></tr>
+      <tr><td>Full Nameplate Current</td><td>${fullAmps.toFixed(1)}A</td><td></td></tr>
+      <tr class="pr-hr"><td><strong>Usable Continuous Current</strong></td><td><strong>${usableAmps.toFixed(1)}A</strong></td><td><strong>NEC 445.13</strong></td></tr>
+    </tbody></table>`) +
+
+    prSection(`Conductor Sizing — ${useOCPD?'NEC 240.4':'NEC 445.13'} &amp; 310.15`, `<table class="pr-table"><thead><tr><th>Parameter</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+      ${useOCPD
+        ? `<tr><td>Downstream OCPD Rating (sizing basis)</td><td>${ocpdRating}A</td><td>NEC 240.4</td></tr>`
+        : `<tr><td>Required Conductor Ampacity (115% nameplate)</td><td>${minAmps.toFixed(1)}A</td><td>NEC 445.13</td></tr>`
+      }
+      <tr><td>Conductor Material</td><td>${matLabel}</td><td>NEC Table 310.12</td></tr>
+      <tr><td>Insulation / Temp Rating</td><td>${insLbls[ins]}</td><td></td></tr>
+      <tr><td>Terminal Rating</td><td>${term}°C</td><td>NEC 110.14(C)</td></tr>
+      <tr><td>Ambient Temperature</td><td>${amb}°C (${Math.round(amb*9/5+32)}°F)</td><td>NEC Table 310.15(B)(1)(1)</td></tr>
+      <tr><td>Temp Correction Factor</td><td>${tf!==null&&tf!==undefined?tf.toFixed(2):'N/A — exceeded'}</td><td>NEC Table 310.15(B)(1)(1)</td></tr>
+      <tr><td>CCC Bundle Adjustment</td><td>${cccLbls[ccc]}</td><td>NEC Table 310.15(C)(1)</td></tr>
+      <tr><td>Parallel Sets Selected</td><td>${parallelSel===0?'Auto':parallelSel===1?'1 (single)':parallelSel+' sets/phase'}</td><td>NEC 310.10(H)</td></tr>
+      ${sol?`
+      <tr><td>Conductor Size Selected</td><td>${SZ_LBL(sol.size)} ${matLabel}</td><td>NEC Table 310.12</td></tr>
+      <tr><td>Base Ampacity (${ins}°C column)</td><td>${sol.baseAmp}A</td><td>NEC Table 310.12</td></tr>
+      <tr><td>Derated Ampacity (base × temp × CCC)</td><td>${sol.derated.toFixed(1)}A</td><td></td></tr>
+      <tr><td>Terminal Limit (${term}°C base)</td><td>${sol.termLim}A</td><td>NEC 110.14(C)</td></tr>
+      <tr><td>Per-Conductor Allowable Ampacity</td><td>${sol.singleFinal}A ${sol.limited?'(terminal limited)':'(derating controlled)'}</td><td></td></tr>
+      ${sol.sets>1?`<tr><td>Sets per Phase</td><td>${sol.sets}</td><td>NEC 310.10(H)</td></tr>
+      <tr class="pr-hr"><td><strong>Total System Ampacity (${sol.sets} × ${sol.singleFinal}A)</strong></td><td><strong>${sol.totalAmp}A</strong></td><td><strong>NEC 310.10(H)</strong></td></tr>`
+      :`<tr class="pr-hr"><td><strong>Final Conductor Size</strong></td><td><strong>${SZ_LBL(sol.size)} ${matLabel}</strong></td><td><strong>${useOCPD?'NEC 240.4':'NEC 445.13'} / 310.12</strong></td></tr>`}
+      `:`<tr class="pr-hr"><td><strong>Conductor Solution</strong></td><td><strong>See notes — inputs may exceed table range</strong></td><td></td></tr>`}
+    </tbody></table>
+    ${sol&&sol.sets>1?`<p style="font-size:0.76rem;margin-top:8px;padding:8px 10px;background:#f0f4ff;border:1px solid #b3c6f5;border-radius:4px;"><strong>NEC 310.10(H) Requirements:</strong> All ${sol.sets} conductors per phase must be the same length, AWG/kcmil size, material, insulation type, and termination method. Each raceway shall contain a complete set of conductors for the circuit.</p>`:''}`) +
+
+    prSection(`Amps at All Voltages — ${kva} kVA ${phLabel}`, `<table class="pr-table"><thead><tr><th>Voltage</th><th>Full Amps (100%)</th><th>Usable @ 80%</th><th>Min Conductor (115%)</th></tr></thead>
+    <tbody>${vRows}</tbody></table>
+    <p style="font-size:0.68rem;color:#999;margin-top:6px;">★ = Selected voltage configuration for this report</p>`) +
+    prCitations('generator') + '</div>' + prFooter();
+}
+
+/* ── GROUNDING PDF ── */
+function buildGndReport(dateStr) {
+  if (gndActiveType === 'EGC') return buildEgcReport(dateStr);
+  return buildGecReport(dateStr);
+}
+
+function buildEgcReport(dateStr) {
+  const ocpd   = +document.getElementById('egc_ocpd').value;
+  const egcMat = document.getElementById('egc_mat').value;
+  const prop   = document.getElementById('egc_prop').checked;
+  const egcRow = EGC_TBL.find(r => r[0] === ocpd);
+  const baseEgc = egcRow ? (egcMat==='CU' ? egcRow[1] : egcRow[2]) : null;
+  let finalEgc = baseEgc, propNote = '', phMin = '', phAct = '';
+  if (prop && baseEgc) {
+    phMin = document.getElementById('egc_phase_min').value;
+    phAct = document.getElementById('egc_phase_act').value;
+    const cmMin = CM_EXT[phMin], cmAct = CM_EXT[phAct], cmBase = CM_EXT[baseEgc];
+    if (cmMin && cmAct && cmBase && cmAct > cmMin) {
+      const reqCM = (cmAct / cmMin) * cmBase;
+      finalEgc = SIZES.find(s => CM_EXT[s] >= reqCM) || '750';
+      propNote = `(${CM_EXT[phAct].toLocaleString()} ÷ ${CM_EXT[phMin].toLocaleString()}) × ${CM_EXT[baseEgc].toLocaleString()} = ${Math.round(reqCM).toLocaleString()} CM → ${SZ_LBL(finalEgc)}`;
+    }
+  }
+  const egcMatLbl = egcMat==='CU' ? 'Copper' : 'Aluminum / CCA';
+  const egcOk = !!finalEgc;
+
+  return prPageHeader('EGC Sizing Report') +
+    prTitleBand('Equipment Grounding Conductor Report', `${egcMatLbl} — ${ocpd}A OCPD — NEC 250.122`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      <div class="pr-sbox ${egcOk?'good':'warn'}">
+        <div class="sbl">Minimum EGC Size</div>
+        <div class="sbv ${egcOk?'pass':'warn'}">${egcOk?SZ_LBL(finalEgc):'N/A'}</div>
+        <div class="sbs">${egcMatLbl} — NEC Table 250.122</div>
+      </div>
+      <div class="pr-sbox">
+        <div class="sbl">OCPD Rating</div>
+        <div class="sbv">${ocpd}A</div>
+        <div class="sbs">Overcurrent protective device</div>
+      </div>
+      <div class="pr-sbox">
+        <div class="sbl">Base Table Size</div>
+        <div class="sbv">${baseEgc?SZ_LBL(baseEgc):'N/A'}</div>
+        <div class="sbs">${prop && finalEgc !== baseEgc ? 'Increased by proportional rule' : 'NEC Table 250.122'}</div>
+      </div>
+    </div>` +
+    prSection('Inputs &amp; Calculation', `<table class="pr-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+        <tr><td>OCPD Rating</td><td>${ocpd}A</td><td>NEC 250.122</td></tr>
+        <tr><td>EGC Material</td><td>${egcMatLbl}</td><td></td></tr>
+        <tr><td>Base Table EGC Size</td><td>${baseEgc?SZ_LBL(baseEgc):'N/A'}</td><td>NEC Table 250.122</td></tr>
+        <tr><td>Proportional Sizing (250.122(B))</td><td>${prop?'Applied':'Not applied'}</td><td>NEC 250.122(B)</td></tr>
+        ${prop && propNote ? `<tr><td>Phase Conductor — Min / Actual</td><td>${SZ_LBL(phMin)} / ${SZ_LBL(phAct)}</td><td></td></tr>
+        <tr><td>Proportional Calculation</td><td colspan="2" style="font-size:0.8rem;">${propNote}</td></tr>` : ''}
+        <tr class="pr-hr"><td><strong>Minimum EGC Size</strong></td><td><strong>${egcOk?SZ_LBL(finalEgc):'N/A'}</strong></td><td><strong>NEC Table 250.122</strong></td></tr>
+      </tbody></table>`) +
+    prCitations('ground') + '</div>' + prFooter();
+}
+
+function buildGecReport(dateStr) {
+  const seMat   = document.getElementById('gec_semat').value;
+  const seSz    = document.getElementById('gec_sesz').value;
+  const gecMat  = document.getElementById('gec_mat').value;
+  const elecTyp = document.getElementById('gec_elec').value;
+  const seCM    = CM_EXT[seSz];
+  const gecRow  = seCM ? GEC_TBL.find(r => seCM <= (seMat==='CU' ? r.cuBound : r.alBound)) : null;
+  const baseGec = gecRow ? (gecMat==='CU' ? gecRow.cuGEC : gecRow.alGEC) : null;
+  let finalGec = baseGec, gecCap = '';
+  if (finalGec) {
+    const gecCM = CM_EXT[finalGec];
+    if (elecTyp === 'rod') {
+      const cap = gecMat==='CU' ? '6' : '4';
+      if (gecCM > CM_EXT[cap]) { finalGec = cap; gecCap = `Capped at ${SZ_LBL(cap)} — rod/pipe/plate electrode per NEC 250.66(A)`; }
+    } else if (elecTyp === 'concrete' && gecMat==='CU') {
+      if (gecCM > CM_EXT['4']) { finalGec = '4'; gecCap = 'Capped at 4 AWG copper — concrete-encased electrode per NEC 250.66(B)'; }
+    } else if (elecTyp === 'ring') {
+      gecCap = 'GEC shall not exceed conductor used for ground ring — minimum 2 AWG copper per NEC 250.66(C)';
+    }
+  }
+  const gecMatLbl = gecMat==='CU' ? 'Copper' : 'Aluminum / CCA';
+  const seMatLbl  = seMat==='CU'  ? 'Copper' : 'Aluminum / CCA';
+  const elecLbls  = {general:'General (no cap)',rod:'Rod / Pipe / Plate',concrete:'Concrete-Encased',ring:'Ground Ring'};
+  const gecOk = !!finalGec;
+
+  return prPageHeader('GEC Sizing Report') +
+    prTitleBand('Grounding Electrode Conductor Report', `${gecMatLbl} GEC — ${SZ_LBL(seSz)} ${seMatLbl} SE — NEC 250.66`, dateStr) +
+    `<div class="pr-body">
+    <div class="pr-summary">
+      <div class="pr-sbox ${gecOk?'good':'warn'}">
+        <div class="sbl">Minimum GEC Size</div>
+        <div class="sbv ${gecOk?'pass':'warn'}">${gecOk?SZ_LBL(finalGec):'N/A'}</div>
+        <div class="sbs">${gecMatLbl} — NEC Table 250.66</div>
+      </div>
+      <div class="pr-sbox">
+        <div class="sbl">SE Conductor</div>
+        <div class="sbv">${SZ_LBL(seSz)}</div>
+        <div class="sbs">${seMatLbl} service-entrance conductor</div>
+      </div>
+      <div class="pr-sbox">
+        <div class="sbl">Electrode Type</div>
+        <div class="sbv" style="font-size:0.9rem;">${elecLbls[elecTyp]}</div>
+        <div class="sbs">NEC 250.66${elecTyp==='general'?'':elecTyp==='rod'?' (A)':elecTyp==='concrete'?' (B)':' (C)'}</div>
+      </div>
+    </div>` +
+    prSection('Inputs &amp; Calculation', `<table class="pr-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>NEC Reference</th></tr></thead><tbody>
+        <tr><td>Largest SE Conductor</td><td>${SZ_LBL(seSz)}</td><td>NEC 250.66</td></tr>
+        <tr><td>SE Conductor Material</td><td>${seMatLbl}</td><td></td></tr>
+        <tr><td>GEC Material</td><td>${gecMatLbl}</td><td></td></tr>
+        <tr><td>Base Table GEC Size</td><td>${baseGec?SZ_LBL(baseGec):'N/A'}</td><td>NEC Table 250.66</td></tr>
+        <tr><td>Electrode Type</td><td>${elecLbls[elecTyp]}</td><td>NEC 250.66</td></tr>
+        ${gecCap ? `<tr><td>Size Cap Applied</td><td colspan="2" style="font-size:0.8rem;">${gecCap}</td></tr>` : '<tr><td>Size Cap</td><td>None — general connection</td><td></td></tr>'}
+        <tr class="pr-hr"><td><strong>Minimum GEC Size</strong></td><td><strong>${gecOk?SZ_LBL(finalGec):'N/A'}</strong></td><td><strong>NEC 250.66</strong></td></tr>
+      </tbody></table>`) +
+    prCitations('ground') + '</div>' + prFooter();
+}
+
+/* ── INIT ── */
+window.addEventListener('DOMContentLoaded', () => {
+  addWire(); addWire(); addWire();
+  runAmp();
+  runVD();
+  initGnd();
+  runGnd();
+});
+</script>
+<div id="print-report"></div>
+</body>
+</html>
